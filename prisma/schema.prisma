@@ -1,0 +1,43 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum TradeSide {
+  BUY
+  SELL
+}
+
+model User {
+  id       String    @id @default(cuid())
+  email    String    @unique
+  balances Balance[]
+  trades   Trade[]
+}
+
+model Balance {
+  id     String  @id @default(cuid())
+  userId String
+  symbol String
+  amount Decimal
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@unique([userId, symbol])
+}
+
+model Trade {
+  id        String    @id @default(cuid())
+  userId    String
+  symbol    String
+  side      TradeSide
+  quantity  Decimal
+  price     Decimal
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+}
