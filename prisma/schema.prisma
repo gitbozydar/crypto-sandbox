@@ -21,6 +21,7 @@ model User {
   emailVerified    Boolean  @default(false)
   image            String?
   twoFactorEnabled Boolean? @default(false)
+  showInRanking    Boolean  @default(true) // czy pokazywać w publicznym rankingu ROI
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
@@ -136,9 +137,11 @@ model Market {
 
   updatedAt DateTime @default(now()) @updatedAt
 
-  base   Asset   @relation("MarketBase", fields: [baseSymbol], references: [symbol])
-  quote  Asset   @relation("MarketQuote", fields: [quoteSymbol], references: [symbol])
-  trades Trade[]
+  base              Asset              @relation("MarketBase", fields: [baseSymbol], references: [symbol])
+  quote             Asset              @relation("MarketQuote", fields: [quoteSymbol], references: [symbol])
+  trades            Trade[]
+  conditionalOrders ConditionalOrder[]
+  recurringBuys     RecurringBuy[]
 
   @@unique([baseSymbol, quoteSymbol])
   @@index([quoteSymbol])
@@ -154,10 +157,12 @@ model Wallet {
   initialBalance Decimal  @db.Decimal(36, 18)
   createdAt      DateTime @default(now())
 
-  user      User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  balances  Balance[]
-  trades    Trade[]
-  snapshots PortfolioSnapshot[]
+  user              User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  balances          Balance[]
+  trades            Trade[]
+  snapshots         PortfolioSnapshot[]
+  conditionalOrders ConditionalOrder[]
+  recurringBuys     RecurringBuy[]
 
   @@unique([userId, name])
   @@index([userId])
@@ -193,8 +198,9 @@ model Trade {
   quoteRateUsdt Decimal   @db.Decimal(36, 18)
   createdAt     DateTime  @default(now())
 
-  wallet Wallet @relation(fields: [walletId], references: [id], onDelete: Cascade)
-  market Market @relation(fields: [marketSymbol], references: [symbol])
+  wallet           Wallet            @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  market           Market            @relation(fields: [marketSymbol], references: [symbol])
+  conditionalOrder ConditionalOrder? // zlecenie warunkowe, które wygenerowało tę transakcję
 
   @@index([walletId, createdAt])
 }
@@ -210,4 +216,64 @@ model PortfolioSnapshot {
   wallet Wallet @relation(fields: [walletId], references: [id], onDelete: Cascade)
 
   @@index([walletId, createdAt])
+}
+
+// ─── Zlecenia warunkowe ─────────────────────────────────────────
+// Czekają na cenę i wtedy wykonują się jak zwykłe zlecenie rynkowe (sprawdza je proces w tle).
+
+enum TriggerType {
+  STOP_LOSS // sprzedaj, gdy cena spadnie do progu (ogranicza stratę)
+  TAKE_PROFIT // sprzedaj, gdy cena wzrośnie do progu (realizuje zysk)
+  LIMIT_BUY // kup, gdy cena spadnie do progu
+}
+
+enum OrderStatus {
+  ACTIVE
+  EXECUTED
+  CANCELLED
+  FAILED
+}
+
+model ConditionalOrder {
+  id           String      @id @default(cuid())
+  walletId     String
+  marketSymbol String
+  type         TriggerType
+  triggerPrice Decimal     @db.Decimal(36, 18) // próg w walucie kwotowania
+  amount       Decimal     @db.Decimal(36, 18) // sprzedaż: ilość monety, kupno: kwota w walucie kwotowania
+  status       OrderStatus @default(ACTIVE)
+  failReason   String? // dlaczego się nie udało (np. brak środków w chwili wykonania)
+  tradeId      String?     @unique
+  createdAt    DateTime    @default(now())
+  executedAt   DateTime?
+
+  wallet Wallet @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  market Market @relation(fields: [marketSymbol], references: [symbol])
+  trade  Trade? @relation(fields: [tradeId], references: [id])
+
+  @@index([status, marketSymbol]) // proces w tle szuka aktywnych zleceń
+  @@index([walletId, status])
+}
+
+// ─── Automatyczne kupowanie (DCA) ───────────────────────────────
+// „Kupuj BTC za 100 USDT co tydzień” — regularne zakupy niezależnie od ceny.
+
+model RecurringBuy {
+  id            String    @id @default(cuid())
+  walletId      String
+  marketSymbol  String
+  amount        Decimal   @db.Decimal(36, 18) // kwota każdego zakupu w walucie kwotowania
+  intervalHours Int // 24 = codziennie, 168 = co tydzień, 720 = co 30 dni
+  nextRunAt     DateTime
+  isActive      Boolean   @default(true)
+  runCount      Int       @default(0)
+  lastRunAt     DateTime?
+  lastError     String? // ostatni błąd (np. brak środków) — plan dalej działa
+  createdAt     DateTime  @default(now())
+
+  wallet Wallet @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  market Market @relation(fields: [marketSymbol], references: [symbol])
+
+  @@index([isActive, nextRunAt]) // proces w tle szuka zaplanowanych zakupów
+  @@index([walletId])
 }

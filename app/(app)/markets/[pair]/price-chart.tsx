@@ -5,6 +5,7 @@ import {
   ColorType,
   createChart,
   HistogramSeries,
+  LineStyle,
   type IChartApi,
   type ISeriesApi,
   type UTCTimestamp,
@@ -21,10 +22,10 @@ type Chart = {
   down: string; // kolor świecy spadkowej
 };
 
-type Props = { market: string; tickSize: string; interval: KlineInterval; liveCandle: Candle | null };
+type Props = { market: string; tickSize: string; interval: KlineInterval; liveCandle: Candle | null; ath: number | null };
 
 // Wykres świecowy (TradingView lightweight-charts). Historia z naszego API, ostatnia świeca na żywo.
-export const PriceChart = ({ market, tickSize, interval, liveCandle }: Props) => {
+export const PriceChart = ({ market, tickSize, interval, liveCandle, ath }: Props) => {
   const container = useRef<HTMLDivElement>(null);
   const chart = useRef<Chart | null>(null);
 
@@ -89,6 +90,14 @@ export const PriceChart = ({ market, tickSize, interval, liveCandle }: Props) =>
     return () => ctrl.abort(); // przerwij stare zapytanie, gdy użytkownik szybko przełącza interwały
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key, tickSize]);
+
+  // Przerywana linia „ATH” (maksimum wszech czasów). Widać ją, gdy mieści się w zakresie wykresu.
+  useEffect(() => {
+    const ch = chart.current;
+    if (!ch || !ath) return;
+    const line = ch.candles.createPriceLine({ price: ath, color: ch.up, lineWidth: 1, lineStyle: LineStyle.Dashed, title: "ATH" });
+    return () => ch.candles.removePriceLine(line);
+  }, [ath]);
 
   // 3. Bieżąca świeca z WebSocketu: update() nadpisuje ostatnią albo dokłada nową.
   useEffect(() => {

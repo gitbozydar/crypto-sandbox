@@ -8,6 +8,8 @@ import { Suspense } from "react";
 export const MAIN_LINKS = [
   { href: "/dashboard", label: "Portfel" },
   { href: "/markets", label: "Rynek" },
+  { href: "/orders", label: "Zlecenia" },
+  { href: "/ranking", label: "Ranking" },
 ] as const;
 
 // Na trasach dynamicznych (np. /markets/[symbol]) ścieżka jest znana dopiero w czasie żądania,

@@ -7,6 +7,11 @@ import { QUOTE_ASSETS } from "@/lib/market/binance";
 import { getMarket, getMarketsForBase, getTickers, marketHref } from "@/lib/market/markets";
 import { getCurrentUser } from "@/lib/session";
 import { getBalances, getRecentTrades } from "@/lib/trading/queries";
+import { prisma } from "@/lib/db";
+import { getCoinInfo } from "@/lib/market/coin-info";
+import { getOrders } from "@/lib/trading/orders";
+import { OrdersList } from "../../orders/orders-list";
+import { CoinInfoCard } from "./coin-info-card";
 import { CoinView } from "./coin-view";
 
 const PairPage = ({ params }: PageProps<"/markets/[pair]">) => (
@@ -22,6 +27,9 @@ const PairPage = ({ params }: PageProps<"/markets/[pair]">) => (
 );
 
 export default PairPage;
+
+// Waluty kwotowania warte ~1 USD — tylko dla nich ATH (podawane w USD) ma sens na wykresie.
+const USD_QUOTES = ["USDT", "USDC", "FDUSD"];
 
 // Kolejność walut w przełączniku par: tak jak w QUOTE_ASSETS (USDT pierwsze).
 const byQuoteOrder = (a: string, b: string) =>
@@ -42,12 +50,16 @@ const Pair = async ({ params }: Pick<PageProps<"/markets/[pair]">, "params">) =>
   // Sprawdzamy base, bo samo sklejenie może pasować do innej pary (np. "BN"+"BBTC").
   if (!market || market.base !== base) notFound();
 
-  const [pairs, tickers, balances, trades] = await Promise.all([
+  const asset = await prisma.asset.findUnique({ where: { symbol: market.base }, select: { coingeckoId: true } });
+  const [pairs, tickers, balances, trades, orders, coinInfo] = await Promise.all([
     getMarketsForBase(base),
     getTickers(),
     getBalances(user.id, [market.base, market.quote]),
     getRecentTrades(user.id, { market: market.symbol, take: 10 }),
+    getOrders(user.id, market.symbol),
+    asset?.coingeckoId ? getCoinInfo(asset.coingeckoId) : null,
   ]);
+  const hasOrders = orders.conditional.length > 0 || orders.recurring.length > 0;
 
   return (
     <>
@@ -56,7 +68,11 @@ const Pair = async ({ params }: Pick<PageProps<"/markets/[pair]">, "params">) =>
         quotes={pairs.map((m) => m.quote).sort(byQuoteOrder)}
         initialTicker={tickers[market.symbol] ?? null}
         balances={{ base: balances[market.base], quote: balances[market.quote] }}
+        // ATH jest w USD — na wykresie pokazujemy go tylko dla par w walutach dolarowych.
+        ath={coinInfo && USD_QUOTES.includes(market.quote) ? coinInfo.ath : null}
       />
+      {coinInfo && <CoinInfoCard name={market.name} symbol={market.base} info={coinInfo} />}
+      {hasOrders && <OrdersList orders={orders} />}
       <TradesTable trades={trades} title={`Twoje transakcje ${market.base}/${market.quote}`} />
     </>
   );

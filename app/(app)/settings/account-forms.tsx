@@ -1,12 +1,13 @@
 "use client";
 
-// Ustawienia konta: wylogowanie innych urządzeń, reset portfela, usunięcie konta.
+// Ustawienia konta: wylogowanie innych urządzeń, widoczność w rankingu, reset portfela, usunięcie konta.
 // Każdy formularz = jedno wywołanie useFormAction (błąd + blokada przycisku w jednym miejscu).
 import { useRouter } from "next/navigation";
+import { useState, useTransition } from "react";
 import { Button, ErrorMessage, Field } from "@/components/ui";
 import { useFormAction } from "@/components/use-form-action";
 import { authClient } from "@/lib/auth-client";
-import { resetPortfolio } from "./actions";
+import { resetPortfolio, setRankingVisibility } from "./actions";
 
 export const RevokeOtherSessions = () => {
   const router = useRouter();
@@ -61,5 +62,31 @@ export const DeleteAccount = () => {
         {pending ? "Usuwam…" : "Usuń konto"}
       </button>
     </form>
+  );
+};
+
+// Przełącznik: czy pokazywać mnie w rankingu (imię, zdjęcie, ROI i wartość portfela).
+export const RankingVisibility = ({ visible }: { visible: boolean }) => {
+  const [checked, setChecked] = useState(visible);
+  const [pending, startTransition] = useTransition();
+  const toggle = () => {
+    const next = !checked;
+    setChecked(next);
+    startTransition(() => setRankingVisibility(next));
+  };
+  return (
+    <label className="flex cursor-pointer items-center gap-3 text-sm">
+      <button
+        type="button"
+        role="switch"
+        aria-checked={checked}
+        onClick={toggle}
+        disabled={pending}
+        className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${checked ? "bg-primary" : "bg-border-strong"}`}
+      >
+        <span className={`absolute top-0.5 left-0.5 size-5 rounded-full bg-foreground transition-transform ${checked ? "translate-x-5" : ""}`} />
+      </button>
+      Pokazuj mnie w rankingu
+    </label>
   );
 };

@@ -1,8 +1,8 @@
 "use client";
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
-import { Toast } from "@/components/toast";
+import { useEffect } from "react";
+import { useToast } from "@/components/toast";
 
 // Powiadomienia po powrocie z linku w mailu. Link prowadzi np. na /dashboard?notice=email-verified,
 // a gdy był zły lub wygasły, Better Auth dokleja jeszcze &error=TOKEN_EXPIRED.
@@ -22,16 +22,15 @@ export const UrlNotice = () => {
   const params = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
-  // Treść czytamy raz, przy pierwszym renderze — zaraz potem adres jest czyszczony.
-  const [message] = useState(() => readNotice(params));
-  const [visible, setVisible] = useState(message !== null);
-  const close = useCallback(() => setVisible(false), []);
+  const toast = useToast();
 
-  // Usuwamy ?notice=… z paska adresu, żeby odświeżenie strony nie pokazało powiadomienia drugi raz.
   useEffect(() => {
-    if (message) router.replace(pathname, { scroll: false });
-  }, [message, router, pathname]);
+    const message = readNotice(params);
+    if (!message) return;
+    toast(message);
+    // Usuwamy ?notice=… z adresu, żeby odświeżenie strony nie pokazało powiadomienia drugi raz.
+    router.replace(pathname, { scroll: false });
+  }, [params, toast, router, pathname]);
 
-  if (!message || !visible) return null;
-  return <Toast tone={message.tone} title={message.title} text={message.text} onClose={close} />;
+  return null;
 };

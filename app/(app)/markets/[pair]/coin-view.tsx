@@ -15,6 +15,7 @@ type Props = {
   quotes: string[]; // wszystkie waluty, w których notowana jest ta moneta (przełącznik par)
   initialTicker: Ticker24h | null;
   balances: { base: string; quote: string };
+  ath: number | null; // maksimum wszech czasów (USD) — linia na wykresie
 };
 
 const tabClass = (active: boolean) =>
@@ -22,7 +23,7 @@ const tabClass = (active: boolean) =>
     active ? "bg-primary text-primary-foreground" : "text-muted hover:bg-surface-muted hover:text-foreground"
   }`;
 
-export const CoinView = ({ market, quotes, initialTicker, balances }: Props) => {
+export const CoinView = ({ market, quotes, initialTicker, balances, ath }: Props) => {
   const [interval, setChartInterval] = useState<KlineInterval>("1h");
   const [ticker, setTicker] = useState(initialTicker);
   const [liveCandle, setLiveCandle] = useState<Candle | null>(null);
@@ -96,7 +97,7 @@ export const CoinView = ({ market, quotes, initialTicker, balances }: Props) => 
               </button>
             ))}
           </div>
-          <PriceChart market={market.symbol} tickSize={market.tickSize} interval={interval} liveCandle={liveCandle} />
+          <PriceChart market={market.symbol} tickSize={market.tickSize} interval={interval} liveCandle={liveCandle} ath={ath} />
         </Card>
         <OrderPanel market={market} balances={balances} price={price} />
       </div>

@@ -20,7 +20,7 @@ const round = (d: Decimal) => d.toDecimalPlaces(18, Decimal.ROUND_DOWN);
 
 export type Side = "BUY" | "SELL";
 export type OrderInput = { market: string; side: Side; amount: string; max?: boolean };
-export type TradeResult = { side: Side; base: string; quote: string; quantity: string; price: string };
+export type TradeResult = { id: string; side: Side; base: string; quote: string; quantity: string; price: string; value: string };
 
 // Błąd, którego treść można bezpiecznie pokazać użytkownikowi.
 export class TradeError extends Error {}
@@ -79,7 +79,7 @@ export const executeMarketOrder = async (userId: string, input: OrderInput): Pro
   const receive = isBuy ? quantity : value.sub(fee);
 
   // Jedna transakcja bazodanowa: wszystko albo nic.
-  await prisma.$transaction(async (tx) => {
+  const trade = await prisma.$transaction(async (tx) => {
     // Odejmujemy tylko, jeśli saldo wystarcza (WHERE amount >= pay). Dwa równoległe
     // zlecenia nie wydadzą więc tych samych pieniędzy dwa razy.
     const { count } = await tx.balance.updateMany({
@@ -94,16 +94,18 @@ export const executeMarketOrder = async (userId: string, input: OrderInput): Pro
       create: { walletId: wallet.id, assetSymbol: getAsset, amount: receive },
     });
 
-    await tx.trade.create({
+    return tx.trade.create({
       data: { walletId: wallet.id, marketSymbol: market.symbol, side: input.side, quantity, price, quoteAmount: value, fee, quoteRateUsdt },
     });
   });
 
   return {
+    id: trade.id,
     side: input.side,
     base: market.baseSymbol,
     quote: market.quoteSymbol,
     quantity: quantity.toString(),
     price: price.toString(),
+    value: value.toString(),
   };
 };

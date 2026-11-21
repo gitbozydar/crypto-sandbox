@@ -3,12 +3,12 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { ChartIcon, LogOutIcon, MenuIcon, SettingsIcon, UserIcon, WalletIcon } from "@/components/icons";
+import { ChartIcon, ListIcon, LogOutIcon, MenuIcon, SettingsIcon, TrophyIcon, UserIcon, WalletIcon } from "@/components/icons";
 import { Avatar } from "@/components/ui";
 import { authClient } from "@/lib/auth-client";
 import { MAIN_LINKS } from "./nav-links";
 
-const MAIN_ICONS = { "/dashboard": WalletIcon, "/markets": ChartIcon };
+const MAIN_ICONS = { "/dashboard": WalletIcon, "/markets": ChartIcon, "/orders": ListIcon, "/ranking": TrophyIcon };
 
 // Menu użytkownika w prawym górnym rogu: ☰ + awatar.
 // Otwiera się kliknięciem. Zamyka po wybraniu pozycji, kliknięciu poza menu albo klawiszem Esc.

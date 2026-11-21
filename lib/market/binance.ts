@@ -80,3 +80,12 @@ export const getBookTicker = async (symbol: string) => {
   const t = await get<{ bidPrice: string; askPrice: string }>(`/ticker/bookTicker?symbol=${symbol}`, { cache: "no-store" });
   return { bid: t.bidPrice, ask: t.askPrice };
 };
+
+// Ostatnie ceny wielu par jednym zapytaniem — dla procesu w tle sprawdzającego zlecenia.
+export const getPrices = async (symbols: string[]) => {
+  const raw = await get<{ symbol: string; price: string }[]>(
+    `/ticker/price?symbols=${encodeURIComponent(JSON.stringify(symbols))}`,
+    { cache: "no-store" },
+  );
+  return new Map(raw.map((t) => [t.symbol, Number(t.price)]));
+};

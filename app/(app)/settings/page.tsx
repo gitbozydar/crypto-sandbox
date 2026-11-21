@@ -3,9 +3,10 @@ import { Suspense } from "react";
 import { SectionsSkeleton } from "@/components/states";
 import { Badge, Section } from "@/components/ui";
 import { auth } from "@/lib/auth";
+import { prisma } from "@/lib/db";
 import { formatDateTime } from "@/lib/format";
 import { getCurrentSession } from "@/lib/session";
-import { DeleteAccount, ResetPortfolio, RevokeOtherSessions } from "./account-forms";
+import { DeleteAccount, RankingVisibility, ResetPortfolio, RevokeOtherSessions } from "./account-forms";
 import { TwoFactorSettings } from "./two-factor-settings";
 
 // Ustawienia: bezpieczeństwo (2FA, sesje) i konto (reset portfela, usunięcie). Dane osobowe są w /profile.
@@ -34,7 +35,10 @@ const describeDevice = (userAgent?: string | null) => {
 
 const Settings = async () => {
   const { user, session } = await getCurrentSession();
-  const sessions = await auth.api.listSessions({ headers: await headers() });
+  const [sessions, privacy] = await Promise.all([
+    auth.api.listSessions({ headers: await headers() }),
+    prisma.user.findUnique({ where: { id: user.id }, select: { showInRanking: true } }),
+  ]);
 
   return (
     <>
@@ -62,6 +66,10 @@ const Settings = async () => {
 
       <h2 className="text-sm font-semibold uppercase tracking-wide text-muted">Konto</h2>
       <div className="grid gap-4 lg:grid-cols-2">
+        <Section title="Prywatność" description="W rankingu inni widzą Twoje imię, zdjęcie, ROI i wartość portfela.">
+          <RankingVisibility visible={privacy?.showInRanking ?? true} />
+        </Section>
+
         <Section title="Portfel" description="Zacznij od nowa z kapitałem 10 000 USDT. Salda, transakcje i historia wartości zostaną usunięte.">
           <ResetPortfolio />
         </Section>

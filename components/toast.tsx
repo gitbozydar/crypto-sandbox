@@ -1,40 +1,61 @@
 "use client";
 
-import { useEffect } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 
 export type ToastTone = "success" | "error";
+type ToastInput = { tone?: ToastTone; title: string; text?: string };
+type ToastItem = ToastInput & { id: number };
 
 const tones: Record<ToastTone, { box: string; icon: string }> = {
   success: { box: "border-success/40", icon: "bg-success text-success-foreground" },
   error: { box: "border-danger/40", icon: "bg-danger text-danger-foreground" },
 };
 
-// Powiadomienie w prawym dolnym rogu. Znika samo po `duration` ms albo po kliknięciu ×.
-// role="status" + aria-live: czytnik ekranu odczyta treść bez przenoszenia fokusu.
-export const Toast = ({
-  tone = "success",
-  title,
-  text,
-  onClose,
-  duration = 6000,
-}: {
-  tone?: ToastTone;
-  title: string;
-  text?: string;
-  onClose: () => void;
-  duration?: number;
-}) => {
-  useEffect(() => {
-    const timer = setTimeout(onClose, duration);
-    return () => clearTimeout(timer);
-  }, [onClose, duration]);
+const DURATION = 6000; // ms
+const MAX_VISIBLE = 3;
+
+// Jeden wspólny „pokazywacz” powiadomień dla całej aplikacji:
+//   const toast = useToast();  toast({ title: "Kupiono 0,01 BTC", text: "…" });
+const ToastContext = createContext<(toast: ToastInput) => void>(() => {});
+export const useToast = () => useContext(ToastContext);
+
+export const ToastProvider = ({ children }: { children: ReactNode }) => {
+  const [toasts, setToasts] = useState<ToastItem[]>([]);
+  const nextId = useRef(0);
+
+  const show = useCallback((toast: ToastInput) => {
+    const id = nextId.current++;
+    setToasts((all) => [...all.slice(-(MAX_VISIBLE - 1)), { ...toast, id }]);
+  }, []);
+  const dismiss = useCallback((id: number) => setToasts((all) => all.filter((t) => t.id !== id)), []);
 
   return (
-    <div
-      role="status"
-      aria-live="polite"
-      className={`fixed right-4 bottom-4 left-4 z-50 flex items-start gap-3 rounded-xl border bg-surface p-4 shadow-xl shadow-black/40 sm:left-auto sm:w-96 animate-toast-in ${tones[tone].box}`}
-    >
+    <ToastContext value={show}>
+      {children}
+      {/* Prawy dolny róg; na telefonie na całą szerokość. aria-live: czytnik ekranu odczyta nowe powiadomienia. */}
+      <div aria-live="polite" className="fixed right-4 bottom-4 left-4 z-50 flex flex-col gap-2 sm:left-auto sm:w-96">
+        {toasts.map((t) => (
+          <Toast key={t.id} {...t} onClose={() => dismiss(t.id)} />
+        ))}
+      </div>
+    </ToastContext>
+  );
+};
+
+// Pojedyncze powiadomienie. Znika samo po kilku sekundach albo po kliknięciu ×.
+const Toast = ({ tone = "success", title, text, onClose }: ToastInput & { onClose: () => void }) => {
+  // Ref zamiast zależności: nowa funkcja onClose przy każdym renderze nie restartuje odliczania.
+  const close = useRef(onClose);
+  useEffect(() => {
+    close.current = onClose;
+  });
+  useEffect(() => {
+    const timer = setTimeout(() => close.current(), DURATION);
+    return () => clearTimeout(timer);
+  }, []);
+
+  return (
+    <div role="status" className={`flex items-start gap-3 rounded-xl border bg-surface p-4 shadow-xl shadow-black/40 animate-toast-in ${tones[tone].box}`}>
       <span className={`flex size-6 shrink-0 items-center justify-center rounded-full text-sm font-bold ${tones[tone].icon}`} aria-hidden>
         {tone === "success" ? "✓" : "!"}
       </span>

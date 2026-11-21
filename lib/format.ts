@@ -44,3 +44,7 @@ export const formatDateTime = (date: Date | number | string, { seconds = false }
   const time = `${parts.hour}:${parts.minute}${seconds ? `:${parts.second}` : ""}`;
   return `${parts.day}.${parts.month}.${parts.year}, ${time}`;
 };
+
+// Liczba do pola formularza: zaokrąglona w dół do `decimals` miejsc, bez zapisu 1e-7 i zbędnych zer.
+export const toInputNumber = (value: number, decimals: number) =>
+  value > 0 ? (Math.floor(value * 10 ** decimals + 1e-9) / 10 ** decimals).toFixed(decimals).replace(/\.?0+$/, "") : "";

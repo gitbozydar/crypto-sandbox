@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Suspense } from "react";
+import { ToastProvider } from "@/components/toast";
 import { Avatar } from "@/components/ui";
 import { getCurrentUser } from "@/lib/session";
 import { NavLinks } from "./nav-links";
@@ -9,7 +10,8 @@ import { VerifyEmailBanner } from "./verify-email-banner";
 
 // Wspólny układ zalogowanej części aplikacji: górny pasek + treść.
 const AppLayout = ({ children }: LayoutProps<"/">) => (
-  <>
+  // ToastProvider: powiadomienia (useToast) dostępne na każdej stronie zalogowanej części.
+  <ToastProvider>
     <header className="sticky top-0 z-10 border-b border-border bg-surface/90 backdrop-blur">
       <nav className="mx-auto flex h-14 w-full max-w-6xl items-center gap-6 px-4">
         <Link href="/dashboard" className="font-semibold">
@@ -34,7 +36,7 @@ const AppLayout = ({ children }: LayoutProps<"/">) => (
     <Suspense fallback={null}>
       <UrlNotice />
     </Suspense>
-  </>
+  </ToastProvider>
 );
 
 export default AppLayout;

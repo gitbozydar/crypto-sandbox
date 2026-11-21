@@ -61,11 +61,12 @@ export const ErrorMessage = ({ message }: { message: string | null }) => {
 
 export const Card = ({ className, ...props }: ComponentProps<"section">) => <section {...props} className={cx("rounded-2xl border border-border bg-surface p-6", className)} />;
 
-export const Badge = ({ tone = "neutral", children }: { tone?: "neutral" | "success" | "primary"; children: ReactNode }) => {
+export const Badge = ({ tone = "neutral", children }: { tone?: "neutral" | "success" | "primary" | "danger"; children: ReactNode }) => {
   const tones = {
     neutral: "bg-surface-muted text-muted",
     success: "bg-success-soft text-success",
-    primary: "bg-primary-soft text-foreground",
+    primary: "bg-primary-soft text-primary",
+    danger: "bg-danger-soft text-danger",
   };
   return <span className={cx("rounded-full px-2.5 py-0.5 text-xs font-medium", tones[tone])}>{children}</span>;
 };
