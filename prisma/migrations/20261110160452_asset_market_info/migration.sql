@@ -1,0 +1,5 @@
+-- AlterTable
+ALTER TABLE "Asset" ADD COLUMN     "imageUrl" TEXT,
+ADD COLUMN     "marketCapRank" INTEGER,
+ADD COLUMN     "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;
+

@@ -12,32 +12,202 @@ enum TradeSide {
   SELL
 }
 
+// ─── Użytkownicy i uwierzytelnianie (tabele wymagane przez Better Auth) ───
+
 model User {
-  id       String    @id @default(cuid())
-  email    String    @unique
-  balances Balance[]
-  trades   Trade[]
+  id               String   @id @default(cuid())
+  name             String
+  email            String   @unique
+  emailVerified    Boolean  @default(false)
+  image            String?
+  twoFactorEnabled Boolean? @default(false)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  sessions   Session[]
+  accounts   Account[]
+  twoFactors TwoFactor[]
+  wallets    Wallet[]
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  expiresAt DateTime
+  ipAddress String?
+  userAgent String?
+  userId    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// Sposób logowania użytkownika. Dla email+hasło: providerId = "credential",
+// a hash hasła (scrypt) trafia do kolumny `password`.
+model Account {
+  id                    String    @id @default(cuid())
+  accountId             String
+  providerId            String
+  userId                String
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// Tymczasowe tokeny (np. weryfikacja e-maila, reset hasła).
+model Verification {
+  id         String   @id @default(cuid())
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+}
+
+// Liczniki limitu prób (Better Auth): ile żądań z danego IP na danej ścieżce w bieżącym oknie czasu.
+model RateLimit {
+  id          String @id @default(cuid())
+  key         String @unique // np. "127.0.0.1/sign-in/email"
+  count       Int
+  lastRequest BigInt // znacznik czasu ostatniego żądania (ms)
+}
+
+// Sekret TOTP i kody zapasowe — Better Auth szyfruje je przed zapisem.
+model TwoFactor {
+  id                      String    @id @default(cuid())
+  secret                  String
+  backupCodes             String
+  userId                  String
+  verified                Boolean?  @default(true)
+  failedVerificationCount Int?      @default(0)
+  lockedUntil             DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([secret])
+  @@index([userId])
+}
+
+// ─── Słownik monet ──────────────────────────────────────────────
+// Metadane monety (z CoinGecko). Notowania są w tabeli Market.
+
+model Asset {
+  symbol        String   @id // np. "BTC", "USDT"
+  name          String // np. "Bitcoin"
+  coingeckoId   String?  @unique // np. "bitcoin"
+  imageUrl      String? // logo z CoinGecko
+  marketCapRank Int? // pozycja wg kapitalizacji — domyślna kolejność na liście rynku
+  updatedAt     DateTime @default(now()) @updatedAt // ostatnia synchronizacja
+
+  balances     Balance[]
+  baseMarkets  Market[]  @relation("MarketBase")
+  quoteMarkets Market[]  @relation("MarketQuote")
+}
+
+// ─── Rynki (pary handlowe) ──────────────────────────────────────
+// Para z Binance, np. BNB/BTC: kupujemy BNB (base), płacąc w BTC (quote).
+// Filtry giełdy są potrzebne silnikowi symulacji do walidacji zleceń.
+
+model Market {
+  symbol      String  @id // symbol na Binance, np. "BNBBTC"
+  baseSymbol  String // np. "BNB"
+  quoteSymbol String // np. "BTC"
+  isActive    Boolean @default(true) // false, gdy Binance przestał notować parę
+
+  tickSize    Decimal @db.Decimal(36, 18) // minimalny krok ceny
+  stepSize    Decimal @db.Decimal(36, 18) // minimalny krok ilości
+  minQty      Decimal @db.Decimal(36, 18) // minimalna ilość w zleceniu
+  minNotional Decimal @db.Decimal(36, 18) // minimalna wartość zlecenia (w quote)
+
+  updatedAt DateTime @default(now()) @updatedAt
+
+  base   Asset   @relation("MarketBase", fields: [baseSymbol], references: [symbol])
+  quote  Asset   @relation("MarketQuote", fields: [quoteSymbol], references: [symbol])
+  trades Trade[]
+
+  @@unique([baseSymbol, quoteSymbol])
+  @@index([quoteSymbol])
+}
+
+// ─── Portfele ───────────────────────────────────────────────────
+
+model Wallet {
+  id             String   @id @default(cuid())
+  userId         String
+  name           String
+  // Kapitał startowy w USDT — baza do liczenia ROI.
+  initialBalance Decimal  @db.Decimal(36, 18)
+  createdAt      DateTime @default(now())
+
+  user      User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  balances  Balance[]
+  trades    Trade[]
+  snapshots PortfolioSnapshot[]
+
+  @@unique([userId, name])
+  @@index([userId])
 }
 
 model Balance {
-  id     String  @id @default(cuid())
-  userId String
-  symbol String
-  amount Decimal
+  id          String   @id @default(cuid())
+  walletId    String
+  assetSymbol String
+  amount      Decimal  @default(0) @db.Decimal(36, 18)
+  updatedAt   DateTime @updatedAt
 
-  user User @relation(fields: [userId], references: [id])
+  wallet Wallet @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  asset  Asset  @relation(fields: [assetSymbol], references: [symbol])
 
-  @@unique([userId, symbol])
+  @@unique([walletId, assetSymbol])
 }
 
-model Trade {
-  id        String    @id @default(cuid())
-  userId    String
-  symbol    String
-  side      TradeSide
-  quantity  Decimal
-  price     Decimal
-  createdAt DateTime  @default(now())
+// ─── Transakcje ─────────────────────────────────────────────────
+// BUY na BNB/BTC: +quantity BNB, −quoteAmount BTC. SELL odwrotnie.
 
-  user User @relation(fields: [userId], references: [id])
+model Trade {
+  id            String    @id @default(cuid())
+  walletId      String
+  marketSymbol  String
+  side          TradeSide
+  quantity      Decimal   @db.Decimal(36, 18) // ilość monety bazowej
+  price         Decimal   @db.Decimal(36, 18) // cena jednostkowa w walucie kwotowania
+  quoteAmount   Decimal   @db.Decimal(36, 18) // quantity * price (w walucie kwotowania)
+  fee           Decimal   @default(0) @db.Decimal(36, 18) // prowizja (w walucie kwotowania)
+  // Kurs waluty kwotowania w USDT w chwili transakcji (USDT → 1, BTC → np. 65 000).
+  // Pozwala policzyć zysk/stratę w USDT także dla par typu ETH/BTC.
+  quoteRateUsdt Decimal   @db.Decimal(36, 18)
+  createdAt     DateTime  @default(now())
+
+  wallet Wallet @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  market Market @relation(fields: [marketSymbol], references: [symbol])
+
+  @@index([walletId, createdAt])
+}
+
+// ─── Analityka ──────────────────────────────────────────────────
+
+model PortfolioSnapshot {
+  id         String   @id @default(cuid())
+  walletId   String
+  totalValue Decimal  @db.Decimal(36, 18) // wartość portfela w USDT
+  createdAt  DateTime @default(now())
+
+  wallet Wallet @relation(fields: [walletId], references: [id], onDelete: Cascade)
+
+  @@index([walletId, createdAt])
 }

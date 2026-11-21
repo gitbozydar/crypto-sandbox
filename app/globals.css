@@ -1,26 +1,95 @@
 @import "tailwindcss";
 
+/*
+ * ─── Paleta kolorów (jedyne miejsce, w którym definiujemy kolory) ───
+ *
+ * Komponenty używają wyłącznie nazw semantycznych (bg-surface, text-muted, bg-primary…),
+ * nigdy konkretnych kolorów. Zmiana motywu = zmiana wartości poniżej.
+ * Aplikacja ma jeden, ciemny motyw z neonowo-zielonym akcentem.
+ * Kolory podawaj jako 6-cyfrowy hex (wykres dokleja do nich przezroczystość).
+ */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  color-scheme: dark; /* pola formularzy i paski przewijania też ciemne */
+
+  --background: #0a0f0c; /* prawie czarny z nutą zieleni — tło strony */
+  --surface: #111814; /* karty, formularze */
+  --surface-muted: #19231d; /* wyróżnione pola, hover */
+  --border: #213029;
+  --border-strong: #2f4539;
+
+  --foreground: #e4f3ea; /* tekst główny */
+  --muted: #86a594; /* tekst pomocniczy */
+
+  --primary: #39ff88; /* neonowa zieleń — przyciski, akcenty */
+  --primary-hover: #74ffab;
+  --primary-soft: #133222;
+  --primary-foreground: #03140a;
+  --primary-glow: #39ff8855; /* poświata wokół przycisków */
+
+  --success: #2ee67a; /* wzrost ceny, zysk */
+  --success-soft: #0f2b1c;
+  --danger: #ff4d6d; /* spadek ceny, strata, błędy */
+  --success-foreground: #03140a; /* tekst na zielonym przycisku */
+  --danger-soft: #34121b;
+  --danger-foreground: #1c0509; /* tekst na czerwonym przycisku */
+
+  /* Kolory serii na wykresach (sprawdzone narzędziem dataviz na tym tle: kontrast,
+     rozróżnialność przy daltonizmie). Kolejność ma znaczenie — sąsiednie kolory przechodzą test. */
+  --chart-1: #3987e5; /* niebieski */
+  --chart-2: #d95926; /* pomarańczowy */
+  --chart-3: #199e70; /* morski */
+  --chart-4: #c98500; /* żółty */
+  --chart-5: #d55181; /* magenta */
+  --chart-6: #0ca30c; /* zielony */
+  --chart-7: #9085e9; /* fiolet */
+  --chart-8: #e66767; /* czerwony */
+  --chart-other: #8a948f; /* „Inne” — neutralny szary */
 }
 
+/* Rejestracja zmiennych jako kolorów Tailwinda → klasy bg-*, text-*, border-*, ring-* */
 @theme inline {
   --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
   --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-soft: var(--primary-soft);
+  --color-primary-foreground: var(--primary-foreground);
+  --shadow-glow: 0 0 18px var(--primary-glow);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-success-foreground: var(--success-foreground);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-danger-foreground: var(--danger-foreground);
+
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+  /* Podświetlenie zmiany ceny → klasy animate-flash-up / animate-flash-down */
+  --animate-flash-up: flash-up 0.9s ease-out;
+  --animate-flash-down: flash-down 0.9s ease-out;
+
+  @keyframes flash-up {
+    from { background-color: var(--success-soft); color: var(--success); }
+  }
+  @keyframes flash-down {
+    from { background-color: var(--danger-soft); color: var(--danger); }
+  }
+
+  /* Wjazd powiadomienia od dołu → klasa animate-toast-in */
+  --animate-toast-in: toast-in 0.25s ease-out;
+  @keyframes toast-in {
+    from { opacity: 0; transform: translateY(12px); }
   }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), system-ui, sans-serif;
 }

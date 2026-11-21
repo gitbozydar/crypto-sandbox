@@ -5,6 +5,13 @@ import nextTs from "eslint-config-next/typescript";
 const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
+  // Jeden styl w całym projekcie: funkcje strzałkowe (const nazwa = () => …) zamiast `function`.
+  {
+    rules: {
+      "func-style": ["error", "expression"],
+      "prefer-arrow-callback": "error",
+    },
+  },
   // Override default ignores of eslint-config-next.
   globalIgnores([
     // Default ignores of eslint-config-next:
