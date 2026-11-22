@@ -59,14 +59,22 @@ Każdy nowy użytkownik dostaje **10 000 USDT** i może sprawdzić swoje strateg
 
 ```mermaid
 flowchart LR
-  Browser["Przeglądarka"] -- "strony, akcje serwera" --> Next["Next.js<br/>(serwer)"]
-  Browser -- "ceny na żywo (WebSocket)" --> Binance[("Binance")]
-  Next -- "ceny, pary, świece" --> Binance
-  Next -- "nazwy, logo, ATH" --> CoinGecko[("CoinGecko")]
-  Next -- "Prisma" --> DB[("PostgreSQL")]
-  Jobs["Proces w tle<br/>(co 15 s)"] -- "stop-loss, DCA" --> DB
-  Jobs -- "ceny" --> Binance
-  Next -- "SMTP" --> Mail[("Gmail")]
+    browser["Przeglądarka"]
+    server["Serwer Next.js"]
+    jobs["Proces w tle, co 15 s"]
+    binance[("Binance")]
+    coingecko[("CoinGecko")]
+    db[("PostgreSQL")]
+    gmail[("Gmail")]
+
+    browser -->|"strony i akcje serwera"| server
+    browser -->|"ceny na żywo, WebSocket"| binance
+    server -->|"ceny, pary, świece"| binance
+    server -->|"nazwy, logo, ATH"| coingecko
+    server -->|"Prisma"| db
+    server -->|"SMTP"| gmail
+    jobs -->|"stop-loss, DCA"| db
+    jobs -->|"ceny"| binance
 ```
 
 Najważniejsze decyzje:
