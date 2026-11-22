@@ -18,7 +18,15 @@ export const auth = betterAuth({
     enabled: true,
     minPasswordLength: 8,
     maxPasswordLength: 128,
-    sendResetPassword: async ({ user, url }) => sendMail({ to: user.email, subject: "Reset hasła", url }),
+    sendResetPassword: async ({ user, url }) =>
+      sendMail({
+        to: user.email,
+        subject: "Reset hasła — Crypto Sandbox",
+        heading: "Reset hasła",
+        text: "Kliknij przycisk, aby ustawić nowe hasło. Link jest ważny przez godzinę.",
+        button: "Ustaw nowe hasło",
+        url,
+      }),
     revokeSessionsOnPasswordReset: true,
   },
 
@@ -26,7 +34,14 @@ export const auth = betterAuth({
     sendOnSignUp: true,
     autoSignInAfterVerification: true,
     sendVerificationEmail: async ({ user, url }) =>
-      sendMail({ to: user.email, subject: "Potwierdź adres e-mail", url }),
+      sendMail({
+        to: user.email,
+        subject: "Potwierdź adres e-mail — Crypto Sandbox",
+        heading: "Potwierdź adres e-mail",
+        text: `Cześć ${user.name}! Kliknij przycisk, aby potwierdzić adres ${user.email}.`,
+        button: "Potwierdź e-mail",
+        url,
+      }),
   },
 
   rateLimit: {
