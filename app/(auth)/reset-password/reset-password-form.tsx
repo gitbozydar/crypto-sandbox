@@ -6,6 +6,7 @@ import { useFormAction } from "@/components/use-form-action";
 import { authClient } from "@/lib/auth-client";
 import { authErrorMessage } from "@/lib/auth-errors";
 
+// Formularz ustawiania nowego hasła.
 export const ResetPasswordForm = ({ token }: { token: string }) => {
   const [done, setDone] = useState(false);
   const { onSubmit, error, pending } = useFormAction(async (form) => {
@@ -33,7 +34,14 @@ export const ResetPasswordForm = ({ token }: { token: string }) => {
   return (
     <form onSubmit={onSubmit} className="mt-6 flex flex-col gap-4">
       <Field label="Nowe hasło" name="password" type="password" required minLength={8} autoComplete="new-password" />
-      <Field label="Powtórz hasło" name="confirmPassword" type="password" required minLength={8} autoComplete="new-password" />
+      <Field
+        label="Powtórz hasło"
+        name="confirmPassword"
+        type="password"
+        required
+        minLength={8}
+        autoComplete="new-password"
+      />
       <ErrorMessage message={error} />
       <SubmitButton pending={pending}>Zapisz hasło</SubmitButton>
     </form>

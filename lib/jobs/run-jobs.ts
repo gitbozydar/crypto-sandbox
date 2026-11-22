@@ -1,15 +1,13 @@
-// Proces w tle: co kilkanaście sekund sprawdza zlecenia warunkowe i plany automatycznego kupowania.
-// Każde zlecenie najpierw „rezerwujemy” warunkowym UPDATE (WHERE status = 'ACTIVE'), a dopiero potem
-// wykonujemy — dzięki temu nawet przy kilku instancjach serwera nic nie wykona się dwa razy.
 import { prisma } from "@/lib/db";
 import { getPrices } from "@/lib/market/binance";
 import { TRIGGERS } from "@/lib/trading/constants";
 import { executeMarketOrder, TradeError } from "@/lib/trading/engine";
 
 const HOUR = 60 * 60 * 1000;
+// Funkcja zamieniająca błąd na komunikat dla użytkownika.
 const errorText = (e: unknown) => (e instanceof TradeError ? e.message : "Nieoczekiwany błąd przy wykonaniu.");
 
-// Zlecenia warunkowe, których próg został osiągnięty, wykonujemy jak zwykłe zlecenie rynkowe.
+// Funkcja wykonująca zlecenia warunkowe, których próg został osiągnięty.
 const runConditionalOrders = async () => {
   const orders = await prisma.conditionalOrder.findMany({
     where: { status: "ACTIVE" },
@@ -31,7 +29,7 @@ const runConditionalOrders = async () => {
       where: { id: order.id, status: "ACTIVE" },
       data: { status: "EXECUTED", executedAt: new Date() },
     });
-    if (claimed.count === 0) continue; // ktoś (inna instancja / anulowanie) był pierwszy
+    if (claimed.count === 0) continue;
 
     try {
       const trade = await executeMarketOrder(order.wallet.userId, {
@@ -42,13 +40,16 @@ const runConditionalOrders = async () => {
       await prisma.conditionalOrder.update({ where: { id: order.id }, data: { tradeId: trade.id } });
       executed++;
     } catch (e) {
-      await prisma.conditionalOrder.update({ where: { id: order.id }, data: { status: "FAILED", failReason: errorText(e) } });
+      await prisma.conditionalOrder.update({
+        where: { id: order.id },
+        data: { status: "FAILED", failReason: errorText(e) },
+      });
     }
   }
   return executed;
 };
 
-// Plany automatycznego kupowania, których termin minął.
+// Funkcja wykonująca zaplanowane zakupy automatyczne.
 const runRecurringBuys = async () => {
   const now = new Date();
   const plans = await prisma.recurringBuy.findMany({
@@ -58,7 +59,6 @@ const runRecurringBuys = async () => {
   let executed = 0;
 
   for (const plan of plans) {
-    // Rezerwacja: przesuwamy termin tylko, jeśli nikt tego jeszcze nie zrobił.
     const claimed = await prisma.recurringBuy.updateMany({
       where: { id: plan.id, isActive: true, nextRunAt: plan.nextRunAt },
       data: { nextRunAt: new Date(now.getTime() + plan.intervalHours * HOUR) },
@@ -66,20 +66,24 @@ const runRecurringBuys = async () => {
     if (claimed.count === 0) continue;
 
     try {
-      await executeMarketOrder(plan.wallet.userId, { market: plan.marketSymbol, side: "BUY", amount: plan.amount.toFixed() });
+      await executeMarketOrder(plan.wallet.userId, {
+        market: plan.marketSymbol,
+        side: "BUY",
+        amount: plan.amount.toFixed(),
+      });
       await prisma.recurringBuy.update({
         where: { id: plan.id },
         data: { runCount: { increment: 1 }, lastRunAt: now, lastError: null },
       });
       executed++;
     } catch (e) {
-      // Plan działa dalej — np. po doładowaniu salda następny zakup się uda.
       await prisma.recurringBuy.update({ where: { id: plan.id }, data: { lastRunAt: now, lastError: errorText(e) } });
     }
   }
   return executed;
 };
 
+// Funkcja uruchamiająca jeden przebieg procesu w tle.
 export const runJobs = async () => {
   const [orders, recurring] = await Promise.all([runConditionalOrders(), runRecurringBuys()]);
   return { orders, recurring };

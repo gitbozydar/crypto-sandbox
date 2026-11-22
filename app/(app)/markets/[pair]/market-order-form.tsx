@@ -3,35 +3,31 @@
 import { useState, useTransition } from "react";
 import { useToast } from "@/components/toast";
 import { ErrorMessage } from "@/components/ui";
-import { decimalsFromStep, formatNumber, formatPriceTick, toInputNumber } from "@/lib/format";
+import { decimalsFromStep, formatNumber, formatPriceTick, parseInputNumber, toInputNumber } from "@/lib/format";
 import type { MarketInfo } from "@/lib/market/markets-shared";
 import { FEE_RATE } from "@/lib/trading/constants";
-import { placeOrder } from "./actions";
+import { placeOrder } from "@/lib/actions/trading";
 import { AvailableBalance, ChipRow, NumberInput, sideColor, Summary, type Side } from "./form-parts";
 
 const fee = Number(FEE_RATE);
 
 type Props = { market: MarketInfo; side: Side; balances: { base: string; quote: string }; price: number | null };
 
-// Zlecenie rynkowe — wykonuje się od razu.
-//   Kupno:    wpisujesz kwotę w walucie kwotowania (np. 100 USDT).
-//   Sprzedaż: wpisujesz ilość monety (np. 0.01 BTC).
-// Wyliczenia tutaj to tylko podgląd — serwer liczy wszystko od nowa po aktualnej cenie.
+// Formularz zlecenia rynkowego (kupno lub sprzedaż od razu).
 export const MarketOrderForm = ({ market, side, balances, price }: Props) => {
   const [typed, setTyped] = useState("");
-  const [max, setMax] = useState(false); // „100%” = całe saldo w chwili wykonania, a nie konkretna liczba
+  const [max, setMax] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const toast = useToast();
 
   const isBuy = side === "BUY";
-  const unit = isBuy ? market.quote : market.base; // w czym wpisujesz kwotę = czym płacisz
+  const unit = isBuy ? market.quote : market.base;
   const balance = Number(isBuy ? balances.quote : balances.base);
   const decimals = isBuy ? 8 : decimalsFromStep(market.stepSize);
   const p = price ?? 0;
-  const amount = max ? balance : Number(typed.replace(",", "."));
+  const amount = max ? balance : parseInputNumber(typed);
 
-  // Podgląd: ilość zaokrąglona w dół do kroku giełdy, tak samo jak na serwerze.
   const step = Number(market.stepSize);
   const qty = p > 0 ? Math.floor((isBuy ? amount / (p * (1 + fee)) : amount) / step + 1e-9) * step : 0;
   const value = qty * p;
@@ -50,7 +46,7 @@ export const MarketOrderForm = ({ market, side, balances, price }: Props) => {
     startTransition(async () => {
       const res = await placeOrder({ market: market.symbol, side, amount: typed, max });
       if (!res.ok) return setError(res.error);
-      const t = res.trade;
+      const t = res.data;
       set({});
       toast({
         title: `${t.side === "BUY" ? "Kupiono" : "Sprzedano"} ${formatNumber(+t.quantity)} ${t.base}`,
@@ -80,7 +76,14 @@ export const MarketOrderForm = ({ market, side, balances, price }: Props) => {
         rows={[
           ["Cena (≈)", p > 0 ? `${formatPriceTick(p, market.tickSize)} ${market.quote}` : "—"],
           [`Prowizja ${fee * 100}%`, qty > 0 ? `${formatNumber(feeAmount)} ${market.quote}` : "—"],
-          ["Otrzymasz (≈)", qty <= 0 ? "—" : isBuy ? `${formatNumber(qty)} ${market.base}` : `${formatNumber(value - feeAmount)} ${market.quote}`],
+          [
+            "Otrzymasz (≈)",
+            qty <= 0
+              ? "—"
+              : isBuy
+                ? `${formatNumber(qty)} ${market.base}`
+                : `${formatNumber(value - feeAmount)} ${market.quote}`,
+          ],
         ]}
       />
       {max && <p className="text-xs text-muted">Całe saldo — ilość zostanie dopasowana do ceny w chwili wykonania.</p>}

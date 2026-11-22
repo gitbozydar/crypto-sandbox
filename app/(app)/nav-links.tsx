@@ -4,7 +4,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Suspense } from "react";
 
-// Główne zakładki. Na wąskich ekranach są ukryte w pasku i pokazują się w menu użytkownika.
 export const MAIN_LINKS = [
   { href: "/dashboard", label: "Portfel" },
   { href: "/markets", label: "Rynek" },
@@ -12,16 +11,17 @@ export const MAIN_LINKS = [
   { href: "/ranking", label: "Ranking" },
 ] as const;
 
-// Na trasach dynamicznych (np. /markets/[symbol]) ścieżka jest znana dopiero w czasie żądania,
-// więc statyczna powłoka renderuje linki bez podświetlenia, a aktywny link dochodzi po chwili.
+// Komponent głównych zakładek nawigacji.
 export const NavLinks = () => (
   <Suspense fallback={<LinkList pathname={null} />}>
     <ActiveNavLinks />
   </Suspense>
 );
 
+// Komponent zakładek z podświetleniem aktywnej strony.
 const ActiveNavLinks = () => <LinkList pathname={usePathname()} />;
 
+// Komponent listy linków nawigacji.
 const LinkList = ({ pathname }: { pathname: string | null }) => (
   <ul className="hidden gap-1 text-sm font-medium sm:flex">
     {MAIN_LINKS.map(({ href, label }) => {

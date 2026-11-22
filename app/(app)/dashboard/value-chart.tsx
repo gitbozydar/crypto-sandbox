@@ -5,12 +5,10 @@ import { useEffect, useRef, useState } from "react";
 import { formatDateTime, formatUsdt } from "@/lib/format";
 import type { ValuePoint } from "@/lib/portfolio/portfolio";
 
-// Wartość portfela w czasie. Linia bazowa = kapitał startowy:
-// powyżej niej wykres jest zielony (zysk), poniżej czerwony (strata).
+// Komponent wykresu wartości portfela w czasie względem kapitału startowego.
 export const ValueChart = ({ points, initial }: { points: ValuePoint[]; initial: number }) => {
   const container = useRef<HTMLDivElement>(null);
   const last = points.at(-1)!;
-  // Punkt pod kursorem (dymek); bez kursora pokazujemy ostatnią wartość.
   const [hover, setHover] = useState<ValuePoint | null>(null);
   const shown = hover ?? last;
 
@@ -33,7 +31,7 @@ export const ValueChart = ({ points, initial }: { points: ValuePoint[]; initial:
     const series = chart.addSeries(BaselineSeries, {
       baseValue: { type: "price", price: initial },
       topLineColor: up,
-      topFillColor1: up + "55", // "55" = półprzezroczysty
+      topFillColor1: up + "55",
       topFillColor2: up + "05",
       bottomLineColor: down,
       bottomFillColor1: down + "05",

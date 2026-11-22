@@ -6,12 +6,13 @@ import { useFormAction } from "@/components/use-form-action";
 import { authClient } from "@/lib/auth-client";
 import { authErrorMessage } from "@/lib/auth-errors";
 
+// Strona prośby o link do resetu hasła.
 const ForgotPasswordPage = () => {
   const [sent, setSent] = useState(false);
   const { onSubmit, error, pending } = useFormAction(async (form) => {
     const { error } = await authClient.requestPasswordReset({
       email: String(form.get("email")),
-      redirectTo: "/reset-password", // link z maila trafi tu z tokenem w adresie
+      redirectTo: "/reset-password",
     });
     if (error) return authErrorMessage(error, "Nie udało się wysłać linku.");
     setSent(true);
@@ -21,7 +22,6 @@ const ForgotPasswordPage = () => {
     <>
       <h1 className="text-2xl font-semibold">Nie pamiętasz hasła?</h1>
       {sent ? (
-        // Ten sam komunikat niezależnie od tego, czy konto istnieje — nie zdradzamy, kto jest zarejestrowany.
         <p role="status" className="mt-4 rounded-lg bg-success-soft px-3 py-2 text-sm text-success">
           Jeśli konto z tym adresem istnieje, wysłaliśmy na nie link do ustawienia nowego hasła.
         </p>

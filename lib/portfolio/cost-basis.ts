@@ -1,24 +1,20 @@
-// Koszt zakupu monet metodą średniej ceny (average cost) — podstawa do liczenia zysku/straty.
-//   Zakup:    ilość rośnie, koszt rośnie o zapłaconą kwotę (w USDT, razem z prowizją).
-//   Sprzedaż: ilość maleje, koszt maleje proporcjonalnie (średnia cena się nie zmienia).
-// Każda transakcja ma dwie strony: przy kupnie ETH za BTC przybywa ETH i ubywa BTC.
-// USDT pomijamy — to „gotówka”, jej wartość jest stała.
-
-export type TradeForCost = {
+type TradeForCost = {
   base: string;
   quote: string;
   side: "BUY" | "SELL";
-  quantity: number; // ilość monety bazowej
-  value: number; // wartość w walucie kwotowania
-  fee: number; // prowizja w walucie kwotowania
-  quoteRateUsdt: number; // kurs waluty kwotowania w USDT w chwili transakcji
+  quantity: number;
+  value: number;
+  fee: number;
+  quoteRateUsdt: number;
 };
 
-export type Position = { quantity: number; cost: number }; // cost = łączny koszt w USDT
+type Position = { quantity: number; cost: number };
 
+// Funkcja wyliczająca koszt zakupu monet metodą średniej ceny.
 export const computeCostBasis = (trades: TradeForCost[]) => {
   const positions = new Map<string, Position>();
-  const positionOf = (asset: string) => positions.get(asset) ?? positions.set(asset, { quantity: 0, cost: 0 }).get(asset)!;
+  const positionOf = (asset: string) =>
+    positions.get(asset) ?? positions.set(asset, { quantity: 0, cost: 0 }).get(asset)!;
 
   const add = (asset: string, quantity: number, costUsdt: number) => {
     if (asset === "USDT") return;

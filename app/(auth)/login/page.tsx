@@ -6,6 +6,7 @@ import { authClient } from "@/lib/auth-client";
 import { authErrorMessage } from "@/lib/auth-errors";
 import { ErrorMessage, Field, SubmitButton, TextLink } from "@/components/ui";
 
+// Strona logowania.
 const LoginPage = () => {
   const router = useRouter();
   const { onSubmit, error, pending } = useFormAction(async (form) => {
@@ -13,9 +14,9 @@ const LoginPage = () => {
       email: String(form.get("email")),
       password: String(form.get("password")),
     });
-    if (error) return error.status === 401 ? "Nieprawidłowy e-mail lub hasło." : authErrorMessage(error, "Błąd logowania.");
+    if (error)
+      return error.status === 401 ? "Nieprawidłowy e-mail lub hasło." : authErrorMessage(error, "Błąd logowania.");
 
-    // Włączone 2FA: hasło poprawne, ale pełna sesja powstanie dopiero po podaniu kodu.
     const needsCode = data && "twoFactorRedirect" in data && data.twoFactorRedirect;
     router.push(needsCode ? "/two-factor" : "/dashboard");
     router.refresh();
@@ -36,8 +37,7 @@ const LoginPage = () => {
       </form>
 
       <p className="mt-6 text-center text-sm text-muted">
-        Nie masz konta?{" "}
-        <TextLink href="/register">Zarejestruj się</TextLink>
+        Nie masz konta? <TextLink href="/register">Zarejestruj się</TextLink>
       </p>
     </>
   );

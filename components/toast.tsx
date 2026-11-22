@@ -2,7 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 
-export type ToastTone = "success" | "error";
+type ToastTone = "success" | "error";
 type ToastInput = { tone?: ToastTone; title: string; text?: string };
 type ToastItem = ToastInput & { id: number };
 
@@ -11,14 +11,14 @@ const tones: Record<ToastTone, { box: string; icon: string }> = {
   error: { box: "border-danger/40", icon: "bg-danger text-danger-foreground" },
 };
 
-const DURATION = 6000; // ms
+const DURATION = 6000;
 const MAX_VISIBLE = 3;
 
-// Jeden wspólny „pokazywacz” powiadomień dla całej aplikacji:
-//   const toast = useToast();  toast({ title: "Kupiono 0,01 BTC", text: "…" });
 const ToastContext = createContext<(toast: ToastInput) => void>(() => {});
+// Hook zwracający funkcję pokazującą powiadomienie.
 export const useToast = () => useContext(ToastContext);
 
+// Komponent przechowujący i wyświetlający powiadomienia.
 export const ToastProvider = ({ children }: { children: ReactNode }) => {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const nextId = useRef(0);
@@ -32,7 +32,6 @@ export const ToastProvider = ({ children }: { children: ReactNode }) => {
   return (
     <ToastContext value={show}>
       {children}
-      {/* Prawy dolny róg; na telefonie na całą szerokość. aria-live: czytnik ekranu odczyta nowe powiadomienia. */}
       <div aria-live="polite" className="fixed right-4 bottom-4 left-4 z-50 flex flex-col gap-2 sm:left-auto sm:w-96">
         {toasts.map((t) => (
           <Toast key={t.id} {...t} onClose={() => dismiss(t.id)} />
@@ -42,9 +41,8 @@ export const ToastProvider = ({ children }: { children: ReactNode }) => {
   );
 };
 
-// Pojedyncze powiadomienie. Znika samo po kilku sekundach albo po kliknięciu ×.
+// Komponent pojedynczego powiadomienia.
 const Toast = ({ tone = "success", title, text, onClose }: ToastInput & { onClose: () => void }) => {
-  // Ref zamiast zależności: nowa funkcja onClose przy każdym renderze nie restartuje odliczania.
   const close = useRef(onClose);
   useEffect(() => {
     close.current = onClose;
@@ -55,8 +53,14 @@ const Toast = ({ tone = "success", title, text, onClose }: ToastInput & { onClos
   }, []);
 
   return (
-    <div role="status" className={`flex items-start gap-3 rounded-xl border bg-surface p-4 shadow-xl shadow-black/40 animate-toast-in ${tones[tone].box}`}>
-      <span className={`flex size-6 shrink-0 items-center justify-center rounded-full text-sm font-bold ${tones[tone].icon}`} aria-hidden>
+    <div
+      role="status"
+      className={`flex items-start gap-3 rounded-xl border bg-surface p-4 shadow-xl shadow-black/40 animate-toast-in ${tones[tone].box}`}
+    >
+      <span
+        className={`flex size-6 shrink-0 items-center justify-center rounded-full text-sm font-bold ${tones[tone].icon}`}
+        aria-hidden
+      >
         {tone === "success" ? "✓" : "!"}
       </span>
       <div className="min-w-0 flex-1">

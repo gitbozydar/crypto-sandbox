@@ -1,11 +1,10 @@
 import { cacheLife, cacheTag } from "next/cache";
+import { prisma } from "@/lib/db";
 
-// Informacje o monecie z CoinGecko: maksimum wszech czasów (ATH), kapitalizacja, podaż.
-// Wartości w USD. Cache 10 min — te dane zmieniają się wolno, a publiczne API ma limit zapytań.
 export type CoinInfo = {
   ath: number;
   athDate: string;
-  athChangePercent: number; // o ile % obecna cena jest niżej od ATH
+  athChangePercent: number;
   atl: number;
   atlDate: string;
   marketCap: number;
@@ -14,13 +13,16 @@ export type CoinInfo = {
   maxSupply: number | null;
 };
 
-export const getCoinInfo = async (coingeckoId: string): Promise<CoinInfo | null> => {
+// Funkcja pobierająca informacje o monecie z CoinGecko.
+const getCoinInfo = async (coingeckoId: string): Promise<CoinInfo | null> => {
   "use cache";
   cacheTag("coin-info");
   cacheLife({ stale: 300, revalidate: 600, expire: 3600 });
 
-  const res = await fetch(`https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=${encodeURIComponent(coingeckoId)}`);
-  if (!res.ok) return null; // np. limit zapytań — strona pokaże się bez tej karty
+  const res = await fetch(
+    `https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=${encodeURIComponent(coingeckoId)}`,
+  );
+  if (!res.ok) return null;
   const [coin] = await res.json();
   if (!coin) return null;
   return {
@@ -34,4 +36,10 @@ export const getCoinInfo = async (coingeckoId: string): Promise<CoinInfo | null>
     circulatingSupply: coin.circulating_supply,
     maxSupply: coin.max_supply,
   };
+};
+
+// Funkcja pobierająca informacje o monecie po jej symbolu.
+export const getCoinInfoFor = async (symbol: string) => {
+  const asset = await prisma.asset.findUnique({ where: { symbol }, select: { coingeckoId: true } });
+  return asset?.coingeckoId ? getCoinInfo(asset.coingeckoId) : null;
 };

@@ -3,10 +3,10 @@
 import { useState, useTransition } from "react";
 import { useToast } from "@/components/toast";
 import { ErrorMessage } from "@/components/ui";
-import { formatNumber } from "@/lib/format";
+import { formatNumber, parseInputNumber } from "@/lib/format";
 import type { MarketInfo } from "@/lib/market/markets-shared";
 import { DCA_INTERVALS, type DcaInterval } from "@/lib/trading/constants";
-import { createRecurringBuyAction } from "../../orders/actions";
+import { createRecurringBuy } from "@/lib/actions/trading";
 import { AvailableBalance, ChipRow, NumberInput, Summary } from "./form-parts";
 
 type Props = { market: MarketInfo; balances: { base: string; quote: string } };
@@ -14,8 +14,7 @@ type Props = { market: MarketInfo; balances: { base: string; quote: string } };
 const intervals = Object.keys(DCA_INTERVALS).map(Number) as DcaInterval[];
 const HOURS_PER_YEAR = 365 * 24;
 
-// Automatyczne kupowanie (DCA — Dollar Cost Averaging): stała kwota w regularnych odstępach,
-// niezależnie od ceny. Uśrednia cenę zakupu i zdejmuje stres „kiedy kupić”.
+// Formularz automatycznego kupowania (DCA).
 export const RecurringBuyForm = ({ market, balances }: Props) => {
   const [amount, setAmount] = useState("");
   const [interval, setIntervalHours] = useState<DcaInterval>(168);
@@ -23,13 +22,13 @@ export const RecurringBuyForm = ({ market, balances }: Props) => {
   const [pending, startTransition] = useTransition();
   const toast = useToast();
 
-  const am = Number(amount.replace(",", "."));
+  const am = parseInputNumber(amount);
   const perYear = am * (HOURS_PER_YEAR / interval);
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     startTransition(async () => {
-      const res = await createRecurringBuyAction({ market: market.symbol, amount, intervalHours: interval });
+      const res = await createRecurringBuy({ market: market.symbol, amount, intervalHours: interval });
       if (!res.ok) return setError(res.error);
       toast({
         title: "Włączono automatyczne kupowanie",
@@ -47,7 +46,13 @@ export const RecurringBuyForm = ({ market, balances }: Props) => {
       </p>
       <AvailableBalance amount={formatNumber(Number(balances.quote), 2)} unit={market.quote} />
       <NumberInput label="Kwota każdego zakupu" unit={market.quote} value={amount} onChange={setAmount} />
-      <ChipRow items={intervals.map((h) => ({ label: DCA_INTERVALS[h], active: h === interval, onClick: () => setIntervalHours(h) }))} />
+      <ChipRow
+        items={intervals.map((h) => ({
+          label: DCA_INTERVALS[h],
+          active: h === interval,
+          onClick: () => setIntervalHours(h),
+        }))}
+      />
       <Summary
         rows={[
           ["Pierwszy zakup", "teraz (w ciągu kilkunastu sekund)"],

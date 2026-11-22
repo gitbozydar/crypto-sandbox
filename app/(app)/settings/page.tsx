@@ -1,38 +1,25 @@
 import { headers } from "next/headers";
-import { Suspense } from "react";
+import { Page } from "@/components/page";
 import { SectionsSkeleton } from "@/components/states";
 import { Badge, Section } from "@/components/ui";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { formatDateTime } from "@/lib/format";
+import { describeDevice } from "@/lib/device";
 import { getCurrentSession } from "@/lib/session";
 import { DeleteAccount, RankingVisibility, ResetPortfolio, RevokeOtherSessions } from "./account-forms";
 import { TwoFactorSettings } from "./two-factor-settings";
 
-// Ustawienia: bezpieczeństwo (2FA, sesje) i konto (reset portfela, usunięcie). Dane osobowe są w /profile.
+// Strona ustawień.
 const SettingsPage = () => (
-  <>
-    <div>
-      <h1 className="text-2xl font-semibold">Ustawienia</h1>
-      <p className="text-sm text-muted">Bezpieczeństwo i zarządzanie kontem.</p>
-    </div>
-    {/* Sesję czytamy w czasie żądania, więc treść musi być w <Suspense>. */}
-    <Suspense fallback={<SectionsSkeleton />}>
-      <Settings />
-    </Suspense>
-  </>
+  <Page title="Ustawienia" description="Bezpieczeństwo i zarządzanie kontem." fallback={<SectionsSkeleton />}>
+    <Settings />
+  </Page>
 );
 
 export default SettingsPage;
 
-// "Mozilla/5.0 (Macintosh…) … Chrome/…" → "Chrome · macOS"
-const describeDevice = (userAgent?: string | null) => {
-  const ua = userAgent ?? "";
-  const browser = /Edg\//.test(ua) ? "Edge" : /Firefox\//.test(ua) ? "Firefox" : /Chrome\//.test(ua) ? "Chrome" : /Safari\//.test(ua) ? "Safari" : "Przeglądarka";
-  const system = /iPhone|iPad/.test(ua) ? "iOS" : /Android/.test(ua) ? "Android" : /Mac OS X/.test(ua) ? "macOS" : /Windows/.test(ua) ? "Windows" : /Linux/.test(ua) ? "Linux" : "nieznany system";
-  return `${browser} · ${system}`;
-};
-
+// Komponent sekcji bezpieczeństwa i konta.
 const Settings = async () => {
   const { user, session } = await getCurrentSession();
   const [sessions, privacy] = await Promise.all([
@@ -70,7 +57,10 @@ const Settings = async () => {
           <RankingVisibility visible={privacy?.showInRanking ?? true} />
         </Section>
 
-        <Section title="Portfel" description="Zacznij od nowa z kapitałem 10 000 USDT. Salda, transakcje i historia wartości zostaną usunięte.">
+        <Section
+          title="Portfel"
+          description="Zacznij od nowa z kapitałem 10 000 USDT. Salda, transakcje i historia wartości zostaną usunięte."
+        >
           <ResetPortfolio />
         </Section>
 

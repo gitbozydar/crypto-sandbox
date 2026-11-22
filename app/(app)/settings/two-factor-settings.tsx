@@ -9,21 +9,17 @@ import { Badge, Card, ErrorMessage, Field, SubmitButton } from "@/components/ui"
 
 type Setup = { totpURI: string; backupCodes: string[] };
 
-// Włączanie 2FA przebiega w dwóch krokach:
-// 1) potwierdzenie hasłem → serwer generuje sekret TOTP i kody zapasowe,
-// 2) użytkownik skanuje QR i wpisuje pierwszy kod → dopiero wtedy 2FA jest aktywne.
+// Komponent włączania i wyłączania weryfikacji dwuetapowej (2FA).
 export const TwoFactorSettings = ({ enabled }: { enabled: boolean }) => {
   const router = useRouter();
   const [setup, setSetup] = useState<Setup | null>(null);
 
-  // Krok 1: hasło → serwer generuje sekret (kod QR) i kody zapasowe.
   const start = useFormAction(async (form) => {
     const { data, error } = await authClient.twoFactor.enable({ password: String(form.get("password")) });
     if (error) return error.message ?? "Nieprawidłowe hasło.";
     if (data && "totpURI" in data) setSetup(data);
   });
 
-  // Krok 2: pierwszy kod z aplikacji → 2FA staje się aktywne.
   const confirm = useFormAction(async (form) => {
     const { error } = await authClient.twoFactor.verifyTotp({ code: String(form.get("code")).trim() });
     if (error) return error.message ?? "Nieprawidłowy kod.";

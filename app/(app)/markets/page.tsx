@@ -1,4 +1,4 @@
-import { Suspense } from "react";
+import { Page } from "@/components/page";
 import { MarketsSkeleton } from "@/components/states";
 import { QUOTE_ASSETS } from "@/lib/market/binance";
 import { getActiveMarkets, getTickers } from "@/lib/market/markets";
@@ -8,30 +8,27 @@ import { MarketFilters } from "./market-filters";
 import { MarketTable } from "./market-table";
 import { Pagination } from "./pagination";
 
+// Strona listy rynku.
 const MarketsPage = ({ searchParams }: PageProps<"/markets">) => (
-  <>
-    <div>
-      <h1 className="text-2xl font-semibold">Rynek</h1>
-      <p className="text-sm text-muted">Wszystkie pary z Binance, ceny na żywo. Kliknij parę, aby zobaczyć wykres.</p>
-    </div>
-    {/* Parametry z adresu znamy dopiero w czasie żądania, więc treść musi być w <Suspense>. */}
-    <Suspense fallback={<MarketsSkeleton />}>
-      <Markets searchParams={searchParams} />
-    </Suspense>
-  </>
+  <Page
+    title="Rynek"
+    description="Wszystkie pary z Binance, ceny na żywo. Kliknij parę, aby zobaczyć wykres."
+    fallback={<MarketsSkeleton />}
+  >
+    <Markets searchParams={searchParams} />
+  </Page>
 );
 
 export default MarketsPage;
 
+// Komponent filtrujący, sortujący i dzielący na strony listę par.
 const Markets = async ({ searchParams }: Pick<PageProps<"/markets">, "searchParams">) => {
   await getCurrentUser();
   const state = parseFilters(await searchParams);
   const [markets, tickers] = await Promise.all([getActiveMarkets(), getTickers()]);
 
-  // Ile par ma każda waluta kwotowania (liczby na zakładkach).
   const counts = Object.fromEntries(QUOTE_ASSETS.map((q) => [q, markets.filter((m) => m.quote === q).length]));
 
-  // Filtrujemy i sortujemy całą listę, a dopiero potem wycinamy bieżącą stronę.
   const rows: MarketRow[] = markets
     .filter((m) => m.quote === state.quote && matchesSearch(m, state.q))
     .map((m) => ({

@@ -6,8 +6,7 @@ import { inputClass } from "@/components/ui";
 import { QUOTE_ASSETS } from "@/lib/market/binance";
 import { marketsUrl, type FilterState } from "./filters";
 
-// Zakładki walut kwotowania + wyszukiwarka. Każda zmiana podmienia adres URL,
-// a serwer renderuje listę od nowa (sortowanie jest w nagłówkach tabeli).
+// Komponent zakładek walut kwotowania i wyszukiwarki par.
 export const MarketFilters = ({ state, counts }: { state: FilterState; counts: Record<string, number> }) => {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -16,7 +15,6 @@ export const MarketFilters = ({ state, counts }: { state: FilterState; counts: R
   const go = (next: Partial<FilterState>) =>
     startTransition(() => router.replace(marketsUrl({ ...state, page: 1, ...next }), { scroll: false }));
 
-  // Szukamy dopiero 300 ms po ostatnim wpisanym znaku, żeby nie odpytywać serwera przy każdym.
   useEffect(() => {
     if (search.trim() === state.q) return;
     const timer = setTimeout(() => go({ q: search.trim() }), 300);
@@ -32,7 +30,9 @@ export const MarketFilters = ({ state, counts }: { state: FilterState; counts: R
             key={quote}
             onClick={() => go({ quote, q: search.trim() })}
             className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
-              quote === state.quote ? "bg-primary text-primary-foreground" : "text-muted hover:bg-surface-muted hover:text-foreground"
+              quote === state.quote
+                ? "bg-primary text-primary-foreground"
+                : "text-muted hover:bg-surface-muted hover:text-foreground"
             }`}
           >
             {quote} <span className="opacity-60">{counts[quote]}</span>

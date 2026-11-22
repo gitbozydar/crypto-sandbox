@@ -2,16 +2,13 @@ import type { NextConfig } from "next";
 
 const isDev = process.env.NODE_ENV === "development";
 
-// Content Security Policy: skąd przeglądarka może ładować skrypty, obrazki, połączenia itd.
-// Blokuje m.in. wstrzyknięte skrypty z obcych domen i osadzanie strony w ramce (clickjacking).
-// Bez nonce'ów — przy Cache Components nonce wymusiłby dynamiczne renderowanie każdej strony.
 const csp = [
   "default-src 'self'",
-  `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""}`, // eval tylko w trybie deweloperskim (React)
+  `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""}`,
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob: https://coin-images.coingecko.com https://assets.coingecko.com", // logo monet
+  "img-src 'self' data: blob: https://coin-images.coingecko.com https://assets.coingecko.com",
   "font-src 'self'",
-  "connect-src 'self' wss://stream.binance.com:9443", // ceny na żywo
+  "connect-src 'self' wss://stream.binance.com:9443",
   "object-src 'none'",
   "base-uri 'self'",
   "form-action 'self'",
@@ -20,10 +17,10 @@ const csp = [
 
 const securityHeaders = [
   { key: "Content-Security-Policy", value: csp },
-  { key: "X-Content-Type-Options", value: "nosniff" }, // przeglądarka nie zgaduje typu pliku
-  { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" }, // nie wysyłamy pełnych adresów do obcych stron
-  { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" }, // nie potrzebujemy tych uprawnień
-  { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains" }, // tylko HTTPS (działa po wdrożeniu)
+  { key: "X-Content-Type-Options", value: "nosniff" },
+  { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+  { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
+  { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains" },
 ];
 
 const nextConfig: NextConfig = {

@@ -1,11 +1,10 @@
-// Wspólne komponenty UI. Style są zdefiniowane tylko tutaj — strony składają się z tych klocków.
-// Kolory pochodzą z tokenów w app/globals.css.
 import Link from "next/link";
 import type { ComponentProps, ReactNode } from "react";
+import { formatSigned, formatUsdt } from "@/lib/format";
+import { marketHref } from "@/lib/market/markets-shared";
 
-const cx = (...classes: (string | false | null | undefined)[]) => classes.filter(Boolean).join(" ");
-
-// ─── Przyciski ──────────────────────────────────────────────────
+// Funkcja łącząca klasy CSS (pomija puste).
+export const cx = (...classes: (string | false | null | undefined)[]) => classes.filter(Boolean).join(" ");
 
 const buttonVariants = {
   primary: "bg-primary text-primary-foreground hover:bg-primary-hover shadow-glow",
@@ -18,6 +17,7 @@ const buttonSizes = {
 
 type ButtonStyle = { variant?: keyof typeof buttonVariants; size?: keyof typeof buttonSizes };
 
+// Funkcja zwracająca klasy przycisku dla wariantu i rozmiaru.
 const buttonClass = ({ variant = "primary", size = "md" }: ButtonStyle = {}) => {
   return cx(
     "inline-flex items-center justify-center rounded-lg font-semibold transition-colors disabled:opacity-50",
@@ -26,21 +26,27 @@ const buttonClass = ({ variant = "primary", size = "md" }: ButtonStyle = {}) => 
   );
 };
 
-export const Button = ({ variant, size, className, ...props }: ButtonStyle & ComponentProps<"button">) => <button {...props} className={cx(buttonClass({ variant, size }), className)} />;
+// Komponent przycisku.
+export const Button = ({ variant, size, className, ...props }: ButtonStyle & ComponentProps<"button">) => (
+  <button {...props} className={cx(buttonClass({ variant, size }), className)} />
+);
 
-export const ButtonLink = ({ variant, size, className, ...props }: ButtonStyle & ComponentProps<typeof Link>) => <Link {...props} className={cx(buttonClass({ variant, size }), className)} />;
+// Komponent linku wyglądającego jak przycisk.
+export const ButtonLink = ({ variant, size, className, ...props }: ButtonStyle & ComponentProps<typeof Link>) => (
+  <Link {...props} className={cx(buttonClass({ variant, size }), className)} />
+);
 
+// Przycisk wysyłania formularza z blokadą na czas zapytania.
 export const SubmitButton = ({ pending, children }: { pending: boolean; children: ReactNode }) => (
   <Button type="submit" disabled={pending} className="mt-2">
     {pending ? "Proszę czekać…" : children}
   </Button>
 );
 
-// ─── Formularze ─────────────────────────────────────────────────
-
 export const inputClass =
   "rounded-lg border border-border bg-surface px-3 py-2 text-base text-foreground outline-none placeholder:text-muted focus:border-primary focus:ring-2 focus:ring-primary/25";
 
+// Komponent pola formularza z etykietą.
 export const Field = ({ label, ...props }: { label: string } & ComponentProps<"input">) => (
   <label className="flex flex-col gap-1.5 text-sm font-medium text-foreground">
     {label}
@@ -48,6 +54,7 @@ export const Field = ({ label, ...props }: { label: string } & ComponentProps<"i
   </label>
 );
 
+// Komponent komunikatu błędu.
 export const ErrorMessage = ({ message }: { message: string | null }) => {
   if (!message) return null;
   return (
@@ -57,11 +64,19 @@ export const ErrorMessage = ({ message }: { message: string | null }) => {
   );
 };
 
-// ─── Układ ──────────────────────────────────────────────────────
+// Komponent karty.
+export const Card = ({ className, ...props }: ComponentProps<"section">) => (
+  <section {...props} className={cx("rounded-2xl border border-border bg-surface p-6", className)} />
+);
 
-export const Card = ({ className, ...props }: ComponentProps<"section">) => <section {...props} className={cx("rounded-2xl border border-border bg-surface p-6", className)} />;
-
-export const Badge = ({ tone = "neutral", children }: { tone?: "neutral" | "success" | "primary" | "danger"; children: ReactNode }) => {
+// Komponent etykiety statusu.
+export const Badge = ({
+  tone = "neutral",
+  children,
+}: {
+  tone?: "neutral" | "success" | "primary" | "danger";
+  children: ReactNode;
+}) => {
   const tones = {
     neutral: "bg-surface-muted text-muted",
     success: "bg-success-soft text-success",
@@ -71,18 +86,15 @@ export const Badge = ({ tone = "neutral", children }: { tone?: "neutral" | "succ
   return <span className={cx("rounded-full px-2.5 py-0.5 text-xs font-medium", tones[tone])}>{children}</span>;
 };
 
-// Zmiana procentowa: zielona przy wzroście, czerwona przy spadku.
-export const PercentChange = ({ value, className }: { value: number | null | undefined; className?: string }) => {
-  if (value == null || Number.isNaN(value)) return <span className={cx("text-muted", className)}>—</span>;
-  return (
-    <span className={cx("tabular-nums", value >= 0 ? "text-success" : "text-danger", className)}>
-      {value >= 0 ? "+" : ""}
-      {value.toFixed(2)}%
-    </span>
+// Komponent zmiany procentowej ze znakiem i kolorem.
+export const PercentChange = ({ value, className }: { value: number | null | undefined; className?: string }) =>
+  value == null || Number.isNaN(value) ? (
+    <span className={cx("text-muted", className)}>—</span>
+  ) : (
+    <Signed value={value} format={(v) => v.toFixed(2)} suffix="%" className={cx("tabular-nums", className)} />
   );
-};
 
-// Logo monety, a gdy go nie ma — kółko z dwiema pierwszymi literami symbolu.
+// Komponent logo monety albo inicjałów symbolu.
 export const CoinIcon = ({ src, symbol, size = 24 }: { src: string | null; symbol: string; size?: number }) =>
   src ? (
     // eslint-disable-next-line @next/next/no-img-element
@@ -96,11 +108,20 @@ export const CoinIcon = ({ src, symbol, size = 24 }: { src: string | null; symbo
     </span>
   );
 
-// Awatar: zdjęcie profilowe albo inicjały, np. "Jan Kowalski" → "JK".
+// Komponent awatara: zdjęcie albo inicjały.
 export const Avatar = ({ name, image, size = 32 }: { name: string; image?: string | null; size?: number }) => {
   if (image) {
-    // eslint-disable-next-line @next/next/no-img-element
-    return <img src={image} alt="" width={size} height={size} className="shrink-0 rounded-full object-cover" style={{ width: size, height: size }} />;
+    return (
+      // eslint-disable-next-line @next/next/no-img-element -- zdjęcie to data URL z bazy, next/image nic tu nie zoptymalizuje
+      <img
+        src={image}
+        alt=""
+        width={size}
+        height={size}
+        className="shrink-0 rounded-full object-cover"
+        style={{ width: size, height: size }}
+      />
+    );
   }
   const initials = name
     .split(/\s+/)
@@ -119,7 +140,7 @@ export const Avatar = ({ name, image, size = 32 }: { name: string; image?: strin
   );
 };
 
-// Karta z tytułem i opisem — sekcje na stronach profilu i ustawień. `danger` = czerwona (np. usuń konto).
+// Komponent sekcji z tytułem i opisem.
 export const Section = ({
   title,
   description,
@@ -140,7 +161,39 @@ export const Section = ({
   </Card>
 );
 
-// Link w treści (np. „Zarejestruj się”) — podkreślony w kolorze akcentu.
+// Komponent linku w tekście.
 export const TextLink = ({ className, ...props }: ComponentProps<typeof Link>) => (
-  <Link {...props} className={cx("font-medium text-foreground underline decoration-primary decoration-2 underline-offset-2", className)} />
+  <Link
+    {...props}
+    className={cx(
+      "font-medium text-foreground underline decoration-primary decoration-2 underline-offset-2",
+      className,
+    )}
+  />
+);
+
+// Komponent linku do strony pary.
+export const PairLink = ({ base, quote }: { base: string; quote: string }) => (
+  <Link href={marketHref({ base, quote })} className="font-medium hover:text-primary">
+    {base}
+    <span className="text-muted">/{quote}</span>
+  </Link>
+);
+
+// Komponent wartości ze znakiem w kolorze zysku lub straty.
+export const Signed = ({
+  value,
+  format = formatUsdt,
+  suffix = "",
+  className,
+}: {
+  value: number;
+  format?: (v: number) => string;
+  suffix?: string;
+  className?: string;
+}) => (
+  <span className={cx(value >= 0 ? "text-success" : "text-danger", className)}>
+    {formatSigned(value, format)}
+    {suffix}
+  </span>
 );

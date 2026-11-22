@@ -1,43 +1,27 @@
 "use client";
 
-// Edycja profilu: zdjęcie, imię i e-mail, hasło.
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Avatar, Button, ErrorMessage, Field, SubmitButton } from "@/components/ui";
 import { useFormAction } from "@/components/use-form-action";
 import { authClient } from "@/lib/auth-client";
 import { authErrorMessage } from "@/lib/auth-errors";
+import { resizeToAvatar } from "@/lib/image";
 
+// Funkcja odczytująca przycięty tekst z pola formularza.
 const text = (form: FormData, key: string) => String(form.get(key) ?? "").trim();
 
+// Komponent komunikatu „Zapisano”.
 const Saved = ({ show }: { show: boolean }) =>
-  show ? <p role="status" className="text-sm text-success">✓ Zapisano</p> : null;
+  show ? (
+    <p role="status" className="text-sm text-success">
+      ✓ Zapisano
+    </p>
+  ) : null;
 
-const AVATAR_SIZE = 256; // px — wystarczy na każdy awatar w aplikacji
 const MAX_FILE_MB = 10;
 
-// Plik → kwadrat wycięty ze środka, zmniejszony do 256×256 → data URL.
-// WebP jest najmniejszy; Safari go nie zapisuje, wtedy JPEG.
-const resizeImage = (file: File) =>
-  new Promise<string>((resolve, reject) => {
-    const img = new Image();
-    const url = URL.createObjectURL(file);
-    img.onload = () => {
-      const side = Math.min(img.width, img.height);
-      const canvas = document.createElement("canvas");
-      canvas.width = canvas.height = AVATAR_SIZE;
-      canvas.getContext("2d")!.drawImage(img, (img.width - side) / 2, (img.height - side) / 2, side, side, 0, 0, AVATAR_SIZE, AVATAR_SIZE);
-      URL.revokeObjectURL(url);
-      const webp = canvas.toDataURL("image/webp", 0.85);
-      resolve(webp.startsWith("data:image/webp") ? webp : canvas.toDataURL("image/jpeg", 0.85));
-    };
-    img.onerror = () => {
-      URL.revokeObjectURL(url);
-      reject(new Error("Nie udało się wczytać obrazka."));
-    };
-    img.src = url;
-  });
-
+// Formularz dodawania, zmiany i usuwania zdjęcia profilowego.
 export const AvatarForm = ({ name, image }: { name: string; image: string | null }) => {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
@@ -49,17 +33,17 @@ export const AvatarForm = ({ name, image }: { name: string; image: string | null
     const { error } = await authClient.updateUser({ image: newImage });
     setPending(false);
     if (error) return setError(error.message ?? "Nie udało się zapisać zdjęcia.");
-    router.refresh(); // nowe zdjęcie od razu w menu w prawym górnym rogu
+    router.refresh();
   };
 
   const onFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    e.target.value = ""; // pozwala wybrać ten sam plik ponownie
+    e.target.value = "";
     if (!file) return;
     if (!file.type.startsWith("image/")) return setError("Wybierz plik graficzny (JPG, PNG, WebP).");
     if (file.size > MAX_FILE_MB * 1024 * 1024) return setError(`Plik jest za duży (maks. ${MAX_FILE_MB} MB).`);
     try {
-      await save(await resizeImage(file));
+      await save(await resizeToAvatar(file));
     } catch (err) {
       setError((err as Error).message);
     }
@@ -70,8 +54,9 @@ export const AvatarForm = ({ name, image }: { name: string; image: string | null
       <div className="flex items-center gap-4">
         <Avatar name={name} image={image} size={88} />
         <div className="flex flex-wrap gap-2">
-          {/* Ukryty <input type="file"> otwierany przez label wyglądający jak przycisk. */}
-          <label className={`cursor-pointer rounded-lg bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground hover:bg-primary-hover ${pending ? "pointer-events-none opacity-50" : ""}`}>
+          <label
+            className={`cursor-pointer rounded-lg bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground hover:bg-primary-hover ${pending ? "pointer-events-none opacity-50" : ""}`}
+          >
             {pending ? "Zapisuję…" : image ? "Zmień zdjęcie" : "Dodaj zdjęcie"}
             <input type="file" accept="image/png,image/jpeg,image/webp" onChange={onFile} className="sr-only" />
           </label>
@@ -88,7 +73,16 @@ export const AvatarForm = ({ name, image }: { name: string; image: string | null
   );
 };
 
-export const ProfileForm = ({ name, email, emailVerified }: { name: string; email: string; emailVerified: boolean }) => {
+// Formularz zmiany imienia i adresu e-mail.
+export const ProfileForm = ({
+  name,
+  email,
+  emailVerified,
+}: {
+  name: string;
+  email: string;
+  emailVerified: boolean;
+}) => {
   const router = useRouter();
   const [saved, setSaved] = useState<string | null>(null);
   const { onSubmit, error, pending } = useFormAction(async (form) => {
@@ -103,11 +97,10 @@ export const ProfileForm = ({ name, email, emailVerified }: { name: string; emai
     if (newEmail !== email) {
       const { error } = await authClient.changeEmail({ newEmail, callbackURL: "/profile?notice=email-changed" });
       if (error) return authErrorMessage(error, "Nie udało się zmienić e-maila.");
-      // Potwierdzony adres zmienia się dopiero po kliknięciu linku wysłanego na nowy adres.
       if (emailVerified) {
-        // Gdy adres należy już do innego konta, serwer celowo nic nie wysyła (i nie zdradza tego),
-        // więc komunikat brzmi „jeśli”.
-        setSaved(`Jeśli adres ${newEmail} jest wolny, wysłaliśmy na niego link — e-mail zmieni się po jego kliknięciu.`);
+        setSaved(
+          `Jeśli adres ${newEmail} jest wolny, wysłaliśmy na niego link — e-mail zmieni się po jego kliknięciu.`,
+        );
         return;
       }
     }
@@ -120,12 +113,17 @@ export const ProfileForm = ({ name, email, emailVerified }: { name: string; emai
       <Field label="Imię" name="name" defaultValue={name} required autoComplete="name" />
       <Field label="E-mail" name="email" type="email" defaultValue={email} required autoComplete="email" />
       <ErrorMessage message={error} />
-      {saved && <p role="status" className="text-sm text-success">{saved}</p>}
+      {saved && (
+        <p role="status" className="text-sm text-success">
+          {saved}
+        </p>
+      )}
       <SubmitButton pending={pending}>Zapisz</SubmitButton>
     </form>
   );
 };
 
+// Formularz zmiany hasła.
 export const PasswordForm = () => {
   const [saved, setSaved] = useState(false);
   const { onSubmit, error, pending } = useFormAction(async (form) => {
@@ -136,9 +134,12 @@ export const PasswordForm = () => {
     const { error } = await authClient.changePassword({
       currentPassword: String(form.get("currentPassword")),
       newPassword,
-      revokeOtherSessions: true, // po zmianie hasła wylogowujemy inne urządzenia
+      revokeOtherSessions: true,
     });
-    if (error) return error.status === 400 ? "Nieprawidłowe obecne hasło." : authErrorMessage(error, "Nie udało się zmienić hasła.");
+    if (error)
+      return error.status === 400
+        ? "Nieprawidłowe obecne hasło."
+        : authErrorMessage(error, "Nie udało się zmienić hasła.");
     setSaved(true);
   });
 
@@ -146,11 +147,17 @@ export const PasswordForm = () => {
     <form onSubmit={onSubmit} className="flex flex-col gap-3">
       <Field label="Obecne hasło" name="currentPassword" type="password" required autoComplete="current-password" />
       <Field label="Nowe hasło" name="newPassword" type="password" required minLength={8} autoComplete="new-password" />
-      <Field label="Powtórz nowe hasło" name="confirmPassword" type="password" required minLength={8} autoComplete="new-password" />
+      <Field
+        label="Powtórz nowe hasło"
+        name="confirmPassword"
+        type="password"
+        required
+        minLength={8}
+        autoComplete="new-password"
+      />
       <ErrorMessage message={error} />
       <Saved show={saved} />
       <SubmitButton pending={pending}>Zmień hasło</SubmitButton>
     </form>
   );
 };
-

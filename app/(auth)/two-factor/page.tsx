@@ -7,8 +7,7 @@ import { authClient } from "@/lib/auth-client";
 import { authErrorMessage } from "@/lib/auth-errors";
 import { ErrorMessage, Field, SubmitButton } from "@/components/ui";
 
-// Drugi krok logowania. Better Auth trzyma tymczasowe ciasteczko po poprawnym haśle,
-// a pełna sesja powstaje dopiero po weryfikacji kodu TOTP lub kodu zapasowego.
+// Strona podawania kodu 2FA przy logowaniu.
 const TwoFactorPage = () => {
   const router = useRouter();
   const [useBackup, setUseBackup] = useState(false);

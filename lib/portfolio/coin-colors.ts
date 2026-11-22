@@ -1,7 +1,3 @@
-// Kolory monet na wykresach. Bierzemy je ze sprawdzonej palety (--chart-1…8 w app/globals.css),
-// a znanym monetom przypisujemy odcień najbliższy ich marce (BTC pomarańczowy, ETH niebieski…).
-// Oryginalne kolory marek nie nadają się wprost: BTC, BNB i DOGE są prawie identyczne.
-
 const SLOTS = ["blue", "orange", "aqua", "yellow", "magenta", "green", "violet", "red"] as const;
 type Slot = (typeof SLOTS)[number];
 
@@ -25,10 +21,11 @@ const BRAND: Record<string, Slot> = {
   LTC: "violet",
 };
 
+// Funkcja zwracająca zmienną CSS koloru wykresu.
 const cssVar = (slot: Slot) => `var(--chart-${SLOTS.indexOf(slot) + 1})`;
 export const OTHER_COLOR = "var(--chart-other)";
 
-// Każda moneta dostaje inny kolor: najpierw kolor marki (jeśli wolny), potem kolejne wolne.
+// Funkcja przypisująca monetom kolory na wykresie.
 export const assignCoinColors = (symbols: string[]) => {
   const colors = new Map<string, string>();
   const used = new Set<Slot>();

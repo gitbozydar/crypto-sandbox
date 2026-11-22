@@ -1,20 +1,26 @@
-// Ranking użytkowników według ROI (zwrotu z kapitału startowego).
-// Liczony z aktualnych sald i cen, wspólny dla wszystkich i odświeżany co ~minutę.
 import { cacheLife, cacheTag } from "next/cache";
 import { prisma } from "@/lib/db";
 import { getTickers } from "@/lib/market/markets";
 import { getPortfolio, usdtPriceOf } from "./portfolio";
 
-export type RankingRow = { userId: string; name: string; image: string | null; value: number; roi: number; trades: number };
+export type RankingRow = {
+  userId: string;
+  name: string;
+  image: string | null;
+  value: number;
+  roi: number;
+  trades: number;
+};
 
-export const getRanking = async (): Promise<RankingRow[]> => {
+// Funkcja wyliczająca ranking użytkowników według ROI.
+const getRanking = async (): Promise<RankingRow[]> => {
   "use cache";
   cacheTag("ranking");
   cacheLife({ stale: 30, revalidate: 60, expire: 300 });
 
   const [wallets, tickers] = await Promise.all([
     prisma.wallet.findMany({
-      where: { user: { showInRanking: true } }, // kto się ukrył w ustawieniach, ten nie trafia do rankingu
+      where: { user: { showInRanking: true } },
       include: {
         user: { select: { id: true, name: true, image: true } },
         balances: { where: { amount: { gt: 0 } } },
@@ -26,7 +32,10 @@ export const getRanking = async (): Promise<RankingRow[]> => {
 
   return wallets
     .map((w) => {
-      const value = w.balances.reduce((sum, b) => sum + b.amount.toNumber() * (usdtPriceOf(b.assetSymbol, tickers) ?? 0), 0);
+      const value = w.balances.reduce(
+        (sum, b) => sum + b.amount.toNumber() * (usdtPriceOf(b.assetSymbol, tickers) ?? 0),
+        0,
+      );
       const initial = w.initialBalance.toNumber();
       return {
         userId: w.user.id,
@@ -40,9 +49,7 @@ export const getRanking = async (): Promise<RankingRow[]> => {
     .sort((a, b) => b.roi - a.roi);
 };
 
-// Ranking ze świeżą pozycją bieżącego użytkownika. Wspólny ranking może być starszy o minutę
-// (cache), ale własny wynik i miejsce widzisz zawsze aktualne — np. zaraz po rejestracji czy transakcji.
-// Zwraca null jako `me`, gdy użytkownik ukrył się w rankingu.
+// Funkcja zwracająca ranking z aktualną pozycją użytkownika.
 export const getRankingFor = async (userId: string) => {
   const [ranking, user, portfolio, trades] = await Promise.all([
     getRanking(),
@@ -53,6 +60,13 @@ export const getRankingFor = async (userId: string) => {
   const others = ranking.filter((r) => r.userId !== userId);
   if (!user?.showInRanking) return { rows: others, me: null };
 
-  const me: RankingRow = { userId, name: user.name, image: user.image, value: portfolio.total, roi: portfolio.roi, trades };
+  const me: RankingRow = {
+    userId,
+    name: user.name,
+    image: user.image,
+    value: portfolio.total,
+    roi: portfolio.roi,
+    trades,
+  };
   return { rows: [...others, me].sort((a, b) => b.roi - a.roi), me };
 };

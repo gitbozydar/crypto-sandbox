@@ -1,25 +1,19 @@
-import { Suspense } from "react";
+import { Page } from "@/components/page";
 import { SectionsSkeleton } from "@/components/states";
 import { Section } from "@/components/ui";
 import { getCurrentUser } from "@/lib/session";
 import { AvatarForm, PasswordForm, ProfileForm } from "./profile-forms";
 
-// Edycja profilu: zdjęcie, imię i e-mail, hasło. Sprawy bezpieczeństwa są w /settings.
+// Strona edycji profilu.
 const ProfilePage = () => (
-  <>
-    <div>
-      <h1 className="text-2xl font-semibold">Profil</h1>
-      <p className="text-sm text-muted">Twoje dane widoczne w aplikacji.</p>
-    </div>
-    {/* Sesję czytamy w czasie żądania, więc treść musi być w <Suspense>. */}
-    <Suspense fallback={<SectionsSkeleton />}>
-      <Profile />
-    </Suspense>
-  </>
+  <Page title="Profil" description="Twoje dane widoczne w aplikacji." fallback={<SectionsSkeleton />}>
+    <Profile />
+  </Page>
 );
 
 export default ProfilePage;
 
+// Komponent formularzy zdjęcia, danych i hasła.
 const Profile = async () => {
   const user = await getCurrentUser();
   return (

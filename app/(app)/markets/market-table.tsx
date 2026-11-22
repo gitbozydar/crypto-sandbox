@@ -9,13 +9,12 @@ import { marketHref } from "@/lib/market/markets-shared";
 import { tickerFromStream, useBinanceStream, type MiniTickerMsg } from "@/lib/market/use-binance-stream";
 import { marketsUrl, sortBy, type FilterState, type MarketRow, type SortKey } from "./filters";
 
-// Najnowsze dane z WebSocketu + poprzednia cena (żeby wiedzieć, czy mignąć na zielono, czy na czerwono).
 type Live = Ticker24h & { prevPrice: number | null };
 
+// Komponent tabeli par z cenami aktualizowanymi na żywo.
 export const MarketTable = ({ rows, state }: { rows: MarketRow[]; state: FilterState }) => {
   const [live, setLive] = useState<Record<string, Live>>({});
 
-  // Jedno połączenie WebSocket dla par widocznych na tej stronie (aktualizacja co ~1 s).
   const streams = useMemo(() => rows.map((r) => `${r.symbol.toLowerCase()}@miniTicker`), [rows]);
   useBinanceStream<MiniTickerMsg>(streams, (m) =>
     setLive((prev) => ({ ...prev, [m.s]: { ...tickerFromStream(m), prevPrice: prev[m.s]?.lastPrice ?? null } })),
@@ -37,9 +36,12 @@ export const MarketTable = ({ rows, state }: { rows: MarketRow[]; state: FilterS
           {rows.map((row) => {
             const l = live[row.symbol];
             const price = l?.lastPrice ?? row.price;
-            // Klasa animacji tylko, gdy cena się zmieniła. `key={price}` na komórce sprawia,
-            // że React tworzy ją od nowa przy każdej zmianie, więc animacja odpala się ponownie.
-            const flash = !l?.prevPrice || l.prevPrice === l.lastPrice ? "" : l.lastPrice > l.prevPrice ? "animate-flash-up" : "animate-flash-down";
+            const flash =
+              !l?.prevPrice || l.prevPrice === l.lastPrice
+                ? ""
+                : l.lastPrice > l.prevPrice
+                  ? "animate-flash-up"
+                  : "animate-flash-down";
             return (
               <tr key={row.symbol} className="transition-colors hover:bg-surface-muted">
                 <td className="px-4 py-3 text-muted tabular-nums">{row.rank ?? "—"}</td>
@@ -76,9 +78,18 @@ export const MarketTable = ({ rows, state }: { rows: MarketRow[]; state: FilterS
   );
 };
 
-// Nagłówek kolumny jest linkiem: klik sortuje po kolumnie, ponowny klik odwraca kierunek.
-// Sortuje serwer (całą listę, nie tylko widoczną stronę).
-const SortHeader = ({ state, column, label, right }: { state: FilterState; column: SortKey; label: string; right?: boolean }) => {
+// Komponent nagłówka kolumny sortującego listę po kliknięciu.
+const SortHeader = ({
+  state,
+  column,
+  label,
+  right,
+}: {
+  state: FilterState;
+  column: SortKey;
+  label: string;
+  right?: boolean;
+}) => {
   const active = state.sort === column;
   return (
     <th
@@ -93,7 +104,6 @@ const SortHeader = ({ state, column, label, right }: { state: FilterState; colum
         }`}
       >
         {label}
-        {/* Strzałka jest zawsze, tylko niewidoczna — dzięki temu nagłówki nie skaczą. */}
         <span className={`w-2 text-[10px] ${active ? "" : "opacity-0"}`} aria-hidden>
           {active && state.dir === "asc" ? "▲" : "▼"}
         </span>

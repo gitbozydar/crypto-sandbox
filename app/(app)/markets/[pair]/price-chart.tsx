@@ -18,24 +18,27 @@ type Chart = {
   api: IChartApi;
   candles: ISeriesApi<"Candlestick">;
   volume: ISeriesApi<"Histogram">;
-  up: string; // kolor świecy wzrostowej
-  down: string; // kolor świecy spadkowej
+  up: string;
+  down: string;
 };
 
-type Props = { market: string; tickSize: string; interval: KlineInterval; liveCandle: Candle | null; ath: number | null };
+type Props = {
+  market: string;
+  tickSize: string;
+  interval: KlineInterval;
+  liveCandle: Candle | null;
+  ath: number | null;
+};
 
-// Wykres świecowy (TradingView lightweight-charts). Historia z naszego API, ostatnia świeca na żywo.
+// Komponent wykresu świecowego z historią i bieżącą świecą na żywo.
 export const PriceChart = ({ market, tickSize, interval, liveCandle, ath }: Props) => {
   const container = useRef<HTMLDivElement>(null);
   const chart = useRef<Chart | null>(null);
 
-  // Zapamiętujemy, dla jakiej pary i interwału przyszły dane. Jeśli dla innych niż teraz —
-  // to znaczy, że nowe jeszcze się ładują (nie trzeba osobnego setState("loading")).
   const key = `${market}:${interval}`;
   const [loaded, setLoaded] = useState<{ key: string; ok: boolean } | null>(null);
   const status = loaded?.key !== key ? "loading" : loaded.ok ? "ready" : "error";
 
-  // 1. Tworzymy wykres raz. Kolory bierzemy z tokenów CSS (app/globals.css).
   useEffect(() => {
     const css = getComputedStyle(document.documentElement);
     const color = (name: string) => css.getPropertyValue(name).trim();
@@ -56,7 +59,6 @@ export const PriceChart = ({ market, tickSize, interval, liveCandle, ath }: Prop
       wickDownColor: down,
       borderVisible: false,
     });
-    // Wolumen jako słupki w dolnych 20% wykresu, na osobnej skali.
     const volume = api.addSeries(HistogramSeries, { priceScaleId: "volume", priceFormat: { type: "volume" } });
     api.priceScale("volume").applyOptions({ scaleMargins: { top: 0.8, bottom: 0 } });
 
@@ -64,7 +66,6 @@ export const PriceChart = ({ market, tickSize, interval, liveCandle, ath }: Prop
     return () => api.remove();
   }, []);
 
-  // Świeca w formacie biblioteki + słupek wolumenu w kolorze świecy ("66" = półprzezroczysty).
   const bar = (c: Candle) => ({ ...c, time: c.time as UTCTimestamp });
   const volumeBar = (c: Candle, ch: Chart) => ({
     time: c.time as UTCTimestamp,
@@ -72,34 +73,38 @@ export const PriceChart = ({ market, tickSize, interval, liveCandle, ath }: Prop
     color: (c.close >= c.open ? ch.up : ch.down) + "66",
   });
 
-  // 2. Przy zmianie pary lub interwału pobieramy historię świec.
   useEffect(() => {
     const ch = chart.current!;
     const ctrl = new AbortController();
     fetch(`/api/market/klines?market=${market}&interval=${interval}`, { signal: ctrl.signal })
       .then((r) => (r.ok ? (r.json() as Promise<Candle[]>) : Promise.reject(r.status)))
       .then((data) => {
-        // Oś cen z dokładnością pary, np. BNB/BTC → 6 miejsc po przecinku.
-        ch.candles.applyOptions({ priceFormat: { type: "price", precision: decimalsFromStep(tickSize), minMove: +tickSize } });
+        ch.candles.applyOptions({
+          priceFormat: { type: "price", precision: decimalsFromStep(tickSize), minMove: +tickSize },
+        });
         ch.candles.setData(data.map(bar));
         ch.volume.setData(data.map((c) => volumeBar(c, ch)));
         ch.api.timeScale().fitContent();
         setLoaded({ key, ok: true });
       })
       .catch(() => !ctrl.signal.aborted && setLoaded({ key, ok: false }));
-    return () => ctrl.abort(); // przerwij stare zapytanie, gdy użytkownik szybko przełącza interwały
+    return () => ctrl.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key, tickSize]);
 
-  // Przerywana linia „ATH” (maksimum wszech czasów). Widać ją, gdy mieści się w zakresie wykresu.
   useEffect(() => {
     const ch = chart.current;
     if (!ch || !ath) return;
-    const line = ch.candles.createPriceLine({ price: ath, color: ch.up, lineWidth: 1, lineStyle: LineStyle.Dashed, title: "ATH" });
+    const line = ch.candles.createPriceLine({
+      price: ath,
+      color: ch.up,
+      lineWidth: 1,
+      lineStyle: LineStyle.Dashed,
+      title: "ATH",
+    });
     return () => ch.candles.removePriceLine(line);
   }, [ath]);
 
-  // 3. Bieżąca świeca z WebSocketu: update() nadpisuje ostatnią albo dokłada nową.
   useEffect(() => {
     const ch = chart.current;
     if (!ch || !liveCandle || status !== "ready") return;

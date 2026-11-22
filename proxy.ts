@@ -1,11 +1,10 @@
 import { getSessionCookie } from "better-auth/cookies";
 import { NextResponse, type NextRequest } from "next/server";
 
-const PROTECTED = ["/dashboard", "/markets", "/orders", "/ranking", "/profile", "/settings"]; // tylko dla zalogowanych
-const GUEST_ONLY = ["/login", "/register"]; // zalogowanego przekierowujemy dalej
+const PROTECTED = ["/dashboard", "/markets", "/orders", "/ranking", "/profile", "/settings"];
+const GUEST_ONLY = ["/login", "/register"];
 
-// Szybkie sprawdzenie: czy jest ciasteczko sesji (bez zapytania do bazy).
-// Pełna weryfikacja sesji jest w getCurrentSession() (lib/session.ts).
+// Funkcja przekierowująca niezalogowanych z chronionych stron.
 export const proxy = (request: NextRequest) => {
   const loggedIn = Boolean(getSessionCookie(request));
   const { pathname } = request.nextUrl;
@@ -17,5 +16,14 @@ export const proxy = (request: NextRequest) => {
 };
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/markets/:path*", "/orders/:path*", "/ranking/:path*", "/profile/:path*", "/settings/:path*", "/login", "/register"],
+  matcher: [
+    "/dashboard/:path*",
+    "/markets/:path*",
+    "/orders/:path*",
+    "/ranking/:path*",
+    "/profile/:path*",
+    "/settings/:path*",
+    "/login",
+    "/register",
+  ],
 };

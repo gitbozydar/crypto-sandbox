@@ -17,8 +17,7 @@ const MODES = [
 ] as const;
 type Mode = (typeof MODES)[number]["id"];
 
-// Panel zleceń obok wykresu: teraz (rynkowe), warunkowe (stop-loss, take-profit, kup po cenie)
-// i automatyczne kupowanie co jakiś czas.
+// Komponent panelu zleceń z zakładkami: teraz, warunkowe, automatyczne.
 export const OrderPanel = ({ market, balances, price }: Props) => {
   const [mode, setMode] = useState<Mode>("market");
   const [side, setSide] = useState<Side>("BUY");
@@ -56,7 +55,6 @@ export const OrderPanel = ({ market, balances, price }: Props) => {
               </button>
             ))}
           </div>
-          {/* key: przy zmianie kierunku formularz zaczyna od pustego pola. */}
           <MarketOrderForm key={side} market={market} side={side} balances={balances} price={price} />
         </>
       )}

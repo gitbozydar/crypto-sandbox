@@ -2,13 +2,14 @@ import { Card } from "@/components/ui";
 import { formatCompact, formatDateTime, formatNumber } from "@/lib/format";
 import type { CoinInfo } from "@/lib/market/coin-info";
 
+// Funkcja formatująca kwotę w dolarach.
 const usd = (v: number) => `$${formatNumber(v, v >= 1 ? 2 : 8)}`;
+// Funkcja zwracająca samą datę bez godziny.
 const dateOnly = (iso: string) => formatDateTime(iso).split(",")[0];
 
-// Karta „O monecie”: ATH (maksimum wszech czasów), ATL, kapitalizacja i podaż (dane CoinGecko, w USD).
+// Komponent karty z informacjami o monecie (ATH, ATL, kapitalizacja, podaż).
 export const CoinInfoCard = ({ name, symbol, info }: { name: string; symbol: string; info: CoinInfo }) => {
   const atAth = info.athChangePercent >= -0.01;
-  // Ile % musiałaby wzrosnąć cena, żeby wrócić do ATH: spadek o 50% wymaga wzrostu o 100%.
   const toRecover = 100 / (1 + info.athChangePercent / 100) - 100;
   const supplyShare = info.maxSupply && info.circulatingSupply ? (100 * info.circulatingSupply) / info.maxSupply : null;
 
@@ -37,6 +38,7 @@ export const CoinInfoCard = ({ name, symbol, info }: { name: string; symbol: str
   );
 };
 
+// Komponent pojedynczej statystyki z etykietą i podpowiedzią.
 const Stat = ({ label, value, hint, tone = "" }: { label: string; value: string; hint?: string; tone?: string }) => (
   <div>
     <dt className="text-xs text-muted">{label}</dt>

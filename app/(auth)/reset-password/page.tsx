@@ -2,12 +2,10 @@ import { Suspense } from "react";
 import { TextLink } from "@/components/ui";
 import { ResetPasswordForm } from "./reset-password-form";
 
-// Tu prowadzi link z maila: Better Auth sprawdza token i przekierowuje na /reset-password?token=…
-// (albo ?error=INVALID_TOKEN, gdy link wygasł lub był już użyty).
+// Strona ustawiania nowego hasła.
 const ResetPasswordPage = ({ searchParams }: PageProps<"/reset-password">) => (
   <>
     <h1 className="text-2xl font-semibold">Ustaw nowe hasło</h1>
-    {/* Parametry z adresu znamy dopiero w czasie żądania, więc treść musi być w <Suspense>. */}
     <Suspense fallback={<p className="mt-4 text-sm text-muted">Ładowanie…</p>}>
       <ResetPassword searchParams={searchParams} />
     </Suspense>
@@ -16,6 +14,7 @@ const ResetPasswordPage = ({ searchParams }: PageProps<"/reset-password">) => (
 
 export default ResetPasswordPage;
 
+// Komponent sprawdzający token z linku i wyświetlający formularz.
 const ResetPassword = async ({ searchParams }: Pick<PageProps<"/reset-password">, "searchParams">) => {
   const { token, error } = await searchParams;
   if (typeof token === "string" && !error) return <ResetPasswordForm token={token} />;

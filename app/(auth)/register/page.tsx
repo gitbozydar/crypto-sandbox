@@ -6,6 +6,7 @@ import { authClient } from "@/lib/auth-client";
 import { authErrorMessage } from "@/lib/auth-errors";
 import { ErrorMessage, Field, SubmitButton, TextLink } from "@/components/ui";
 
+// Strona rejestracji.
 const RegisterPage = () => {
   const router = useRouter();
   const { onSubmit, error, pending } = useFormAction(async (form) => {
@@ -16,7 +17,7 @@ const RegisterPage = () => {
       name: String(form.get("name")),
       email: String(form.get("email")),
       password,
-      callbackURL: "/dashboard?notice=email-verified", // dokąd prowadzi link z maila (pokaże powiadomienie)
+      callbackURL: "/dashboard?notice=email-verified",
     });
     if (error) return authErrorMessage(error, "Nie udało się utworzyć konta.");
 
@@ -33,14 +34,20 @@ const RegisterPage = () => {
         <Field label="Imię" name="name" required autoComplete="name" />
         <Field label="E-mail" name="email" type="email" required autoComplete="email" />
         <Field label="Hasło" name="password" type="password" required minLength={8} autoComplete="new-password" />
-        <Field label="Powtórz hasło" name="confirmPassword" type="password" required minLength={8} autoComplete="new-password" />
+        <Field
+          label="Powtórz hasło"
+          name="confirmPassword"
+          type="password"
+          required
+          minLength={8}
+          autoComplete="new-password"
+        />
         <ErrorMessage message={error} />
         <SubmitButton pending={pending}>Zarejestruj się</SubmitButton>
       </form>
 
       <p className="mt-6 text-center text-sm text-muted">
-        Masz już konto?{" "}
-        <TextLink href="/login">Zaloguj się</TextLink>
+        Masz już konto? <TextLink href="/login">Zaloguj się</TextLink>
       </p>
     </>
   );

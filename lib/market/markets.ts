@@ -5,8 +5,7 @@ import type { MarketInfo } from "./markets-shared";
 
 export { marketHref, type MarketInfo } from "./markets-shared";
 
-// Wszystkie aktywne pary. Zmieniają się tylko przy synchronizacji (npm run sync:markets),
-// więc trzymamy je w cache serwera przez kilka godzin.
+// Funkcja pobierająca wszystkie aktywne pary.
 export const getActiveMarkets = async (): Promise<MarketInfo[]> => {
   "use cache";
   cacheTag("markets");
@@ -30,13 +29,13 @@ export const getActiveMarkets = async (): Promise<MarketInfo[]> => {
   }));
 };
 
+// Funkcja zwracająca parę po symbolu.
 export const getMarket = async (symbol: string) => (await getActiveMarkets()).find((m) => m.symbol === symbol) ?? null;
 
-// Wszystkie pary danej monety (BNB/USDT, BNB/BTC…) — do przełącznika na stronie pary.
+// Funkcja zwracająca wszystkie pary danej monety.
 export const getMarketsForBase = async (base: string) => (await getActiveMarkets()).filter((m) => m.base === base);
 
-// Statystyki 24h wszystkich par jednym zapytaniem do Binance, wspólne dla wszystkich
-// użytkowników i odświeżane co ~15 s. Ceny na żywo dochodzą potem przez WebSocket.
+// Funkcja pobierająca statystyki 24h wszystkich par.
 export const getTickers = async (): Promise<Record<string, Ticker24h>> => {
   "use cache";
   cacheTag("tickers");

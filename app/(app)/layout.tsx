@@ -8,9 +8,8 @@ import { UserMenu } from "./user-menu";
 import { UrlNotice } from "./url-notice";
 import { VerifyEmailBanner } from "./verify-email-banner";
 
-// Wspólny układ zalogowanej części aplikacji: górny pasek + treść.
+// Układ zalogowanej części aplikacji: pasek nawigacji i treść.
 const AppLayout = ({ children }: LayoutProps<"/">) => (
-  // ToastProvider: powiadomienia (useToast) dostępne na każdej stronie zalogowanej części.
   <ToastProvider>
     <header className="sticky top-0 z-10 border-b border-border bg-surface/90 backdrop-blur">
       <nav className="mx-auto flex h-14 w-full max-w-6xl items-center gap-6 px-4">
@@ -19,7 +18,6 @@ const AppLayout = ({ children }: LayoutProps<"/">) => (
         </Link>
         <NavLinks />
         <div className="ml-auto">
-          {/* Dane użytkownika znamy dopiero w czasie żądania — do tego czasu sam awatar. */}
           <Suspense fallback={<Avatar name="" />}>
             <CurrentUserMenu />
           </Suspense>
@@ -32,7 +30,6 @@ const AppLayout = ({ children }: LayoutProps<"/">) => (
       </Suspense>
       {children}
     </main>
-    {/* Powiadomienie po kliknięciu linku z maila (czyta parametry adresu → musi być w <Suspense>). */}
     <Suspense fallback={null}>
       <UrlNotice />
     </Suspense>
@@ -41,11 +38,13 @@ const AppLayout = ({ children }: LayoutProps<"/">) => (
 
 export default AppLayout;
 
+// Komponent pobierający użytkownika i wyświetlający jego menu.
 const CurrentUserMenu = async () => {
   const user = await getCurrentUser();
   return <UserMenu name={user.name} email={user.email} image={user.image} />;
 };
 
+// Komponent pokazujący przypomnienie o niepotwierdzonym e-mailu.
 const EmailReminder = async () => {
   const user = await getCurrentUser();
   return user.emailVerified ? null : <VerifyEmailBanner email={user.email} />;

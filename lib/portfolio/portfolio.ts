@@ -1,5 +1,3 @@
-// Analityka portfela: wartość w USDT, zysk/strata, ROI i historia wartości.
-// Ceny bierzemy z notowań Binance z cache (odświeżane co ~15 s) — nie muszą być „na żywo”.
 import { prisma } from "@/lib/db";
 import type { Ticker24h } from "@/lib/market/binance";
 import { getTickers } from "@/lib/market/markets";
@@ -8,7 +6,7 @@ import { computeCostBasis } from "./cost-basis";
 
 const HOUR = 60 * 60 * 1000;
 
-// Cena monety w USDT. Prawie każda moneta ma parę z USDT; jeśli nie — liczymy przez BTC.
+// Funkcja zwracająca cenę monety w USDT.
 export const usdtPriceOf = (asset: string, tickers: Record<string, Ticker24h>) => {
   if (asset === "USDT") return 1;
   const direct = tickers[`${asset}USDT`]?.lastPrice;
@@ -23,14 +21,15 @@ export type Holding = {
   name: string;
   imageUrl: string | null;
   amount: number;
-  price: number | null; // cena w USDT
-  value: number | null; // wartość w USDT
-  share: number; // udział w portfelu (0–1)
-  averagePrice: number | null; // średnia cena zakupu w USDT
-  pnl: number | null; // niezrealizowany zysk/strata w USDT
+  price: number | null;
+  value: number | null;
+  share: number;
+  averagePrice: number | null;
+  pnl: number | null;
   pnlPercent: number | null;
 };
 
+// Funkcja wyliczająca wartość portfela, zysk/stratę i pozycje.
 export const getPortfolio = async (userId: string) => {
   const wallet = await getOrCreateWallet(userId);
   const [balances, trades, tickers] = await Promise.all([
@@ -91,7 +90,7 @@ export const getPortfolio = async (userId: string) => {
     total,
     initial,
     pnl: total - initial,
-    roi: ((total - initial) / initial) * 100, // zwrot z inwestycji w %
+    roi: ((total - initial) / initial) * 100,
     cash: holdings.find((h) => h.symbol === "USDT")?.amount ?? 0,
     tradeCount: trades.length,
     holdings,
@@ -100,20 +99,20 @@ export const getPortfolio = async (userId: string) => {
 
 export type Portfolio = Awaited<ReturnType<typeof getPortfolio>>;
 
-// Zapisuje bieżącą wartość portfela jako punkt na wykresie.
+// Funkcja zapisująca wartość portfela na wykresie.
 export const recordSnapshot = async (walletId: string, totalValue: number) => {
   await prisma.portfolioSnapshot.create({ data: { walletId, totalValue } });
 };
 
-// Zapis „co najwyżej raz na godzinę” — żeby wykres miał punkty także bez transakcji.
+// Funkcja zapisująca wartość portfela najwyżej raz na godzinę.
 export const recordSnapshotIfStale = async (walletId: string, totalValue: number) => {
   const last = await prisma.portfolioSnapshot.findFirst({ where: { walletId }, orderBy: { createdAt: "desc" } });
   if (!last || Date.now() - last.createdAt.getTime() > HOUR) await recordSnapshot(walletId, totalValue);
 };
 
-export type ValuePoint = { time: number; value: number }; // time w sekundach UNIX
+export type ValuePoint = { time: number; value: number };
 
-// Historia wartości portfela + bieżąca wartość jako ostatni punkt.
+// Funkcja pobierająca historię wartości portfela.
 export const getValueHistory = async (walletId: string, currentValue: number): Promise<ValuePoint[]> => {
   const rows = await prisma.portfolioSnapshot.findMany({
     where: { walletId },
@@ -123,7 +122,6 @@ export const getValueHistory = async (walletId: string, currentValue: number): P
   const points = rows.map((r) => ({ time: r.createdAt.getTime() / 1000, value: r.totalValue.toNumber() }));
   points.push({ time: Date.now() / 1000, value: currentValue });
 
-  // Biblioteka wykresów wymaga rosnących, unikalnych czasów (co do sekundy).
   const bySecond = new Map(points.map((p) => [Math.floor(p.time), p.value]));
   return [...bySecond].map(([time, value]) => ({ time, value }));
 };

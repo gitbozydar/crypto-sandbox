@@ -3,18 +3,17 @@
 import { useState, useTransition } from "react";
 import { useToast } from "@/components/toast";
 import { ErrorMessage } from "@/components/ui";
-import { decimalsFromStep, formatNumber, formatPriceTick, toInputNumber } from "@/lib/format";
+import { decimalsFromStep, formatNumber, formatPriceTick, parseInputNumber, toInputNumber } from "@/lib/format";
 import type { MarketInfo } from "@/lib/market/markets-shared";
 import { TRIGGERS, type TriggerType } from "@/lib/trading/constants";
-import { createConditionalOrderAction } from "../../orders/actions";
+import { createConditionalOrder } from "@/lib/actions/trading";
 import { AvailableBalance, ChipRow, NumberInput, sideColor, Summary } from "./form-parts";
 
 type Props = { market: MarketInfo; balances: { base: string; quote: string }; price: number | null };
 
-// Szybkie progi ceny względem obecnej: w dół dla stop-loss i kupna, w górę dla take-profit.
 const OFFSETS = [5, 10, 20];
 
-// Zlecenie warunkowe: czeka, aż cena dojdzie do progu, i wtedy wykonuje się jak zlecenie rynkowe.
+// Formularz zlecenia warunkowego (stop-loss, take-profit, kupno po cenie).
 export const ConditionalOrderForm = ({ market, balances, price }: Props) => {
   const [type, setType] = useState<TriggerType>("STOP_LOSS");
   const [triggerPrice, setTriggerPrice] = useState("");
@@ -25,13 +24,13 @@ export const ConditionalOrderForm = ({ market, balances, price }: Props) => {
 
   const trigger = TRIGGERS[type];
   const isSell = trigger.side === "SELL";
-  const unit = isSell ? market.base : market.quote; // sprzedaż: ilość monety, kupno: kwota
+  const unit = isSell ? market.base : market.quote;
   const balance = Number(isSell ? balances.base : balances.quote);
   const amountDecimals = isSell ? decimalsFromStep(market.stepSize) : 8;
   const priceDecimals = decimalsFromStep(market.tickSize);
   const p = price ?? 0;
-  const tp = Number(triggerPrice.replace(",", "."));
-  const am = Number(amount.replace(",", "."));
+  const tp = parseInputNumber(triggerPrice);
+  const am = parseInputNumber(amount);
   const direction = trigger.when === "below" ? -1 : 1;
 
   const chooseType = (next: TriggerType) => {
@@ -44,7 +43,7 @@ export const ConditionalOrderForm = ({ market, balances, price }: Props) => {
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     startTransition(async () => {
-      const res = await createConditionalOrderAction({ market: market.symbol, type, triggerPrice, amount });
+      const res = await createConditionalOrder({ market: market.symbol, type, triggerPrice, amount });
       if (!res.ok) return setError(res.error);
       toast({
         title: `Ustawiono: ${trigger.label}`,
@@ -75,7 +74,12 @@ export const ConditionalOrderForm = ({ market, balances, price }: Props) => {
       />
 
       <AvailableBalance amount={formatNumber(balance, amountDecimals)} unit={unit} />
-      <NumberInput label={isSell ? "Ilość do sprzedaży" : "Kwota zakupu"} unit={unit} value={amount} onChange={setAmount} />
+      <NumberInput
+        label={isSell ? "Ilość do sprzedaży" : "Kwota zakupu"}
+        unit={unit}
+        value={amount}
+        onChange={setAmount}
+      />
       <ChipRow
         items={[0.25, 0.5, 0.75, 1].map((pct) => ({
           label: `${pct * 100}%`,
@@ -90,7 +94,11 @@ export const ConditionalOrderForm = ({ market, balances, price }: Props) => {
           ["Odległość od ceny", p > 0 && tp > 0 ? `${(((tp - p) / p) * 100).toFixed(2)}%` : "—"],
           [
             isSell ? "Otrzymasz (≈)" : "Kupisz (≈)",
-            tp > 0 && am > 0 ? (isSell ? `${formatNumber(am * tp, 2)} ${market.quote}` : `${formatNumber(am / tp)} ${market.base}`) : "—",
+            tp > 0 && am > 0
+              ? isSell
+                ? `${formatNumber(am * tp, 2)} ${market.quote}`
+                : `${formatNumber(am / tp)} ${market.base}`
+              : "—",
           ],
         ]}
       />

@@ -1,0 +1,10 @@
+.next
+node_modules
+src/generated
+prisma/migrations
+package-lock.json
+.agents
+.claude
+.windsurf
+skills-lock.json
+AGENTS.md

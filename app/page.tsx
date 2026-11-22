@@ -1,5 +1,6 @@
 import { ButtonLink } from "@/components/ui";
 
+// Strona powitalna.
 const Home = () => (
   <main className="flex flex-1 flex-col items-center justify-center gap-6 px-4 text-center">
     <h1 className="text-4xl font-semibold tracking-tight">Crypto Sandbox</h1>

@@ -5,11 +5,14 @@ import { useFormAction } from "@/components/use-form-action";
 import { authClient } from "@/lib/auth-client";
 import { authErrorMessage } from "@/lib/auth-errors";
 
-// Przypomnienie pod paskiem nawigacji, dopóki adres e-mail nie jest potwierdzony.
+// Komponent przypomnienia o potwierdzeniu e-maila z ponownym wysłaniem linku.
 export const VerifyEmailBanner = ({ email }: { email: string }) => {
   const [sent, setSent] = useState(false);
   const { onSubmit, error, pending } = useFormAction(async () => {
-    const { error } = await authClient.sendVerificationEmail({ email, callbackURL: "/dashboard?notice=email-verified" });
+    const { error } = await authClient.sendVerificationEmail({
+      email,
+      callbackURL: "/dashboard?notice=email-verified",
+    });
     if (error) return authErrorMessage(error, "Nie udało się wysłać linku.");
     setSent(true);
   });
@@ -25,7 +28,11 @@ export const VerifyEmailBanner = ({ email }: { email: string }) => {
       {sent ? (
         <span className="text-success">✓ Wysłano nowy link</span>
       ) : (
-        <button type="submit" disabled={pending} className="font-medium text-primary underline underline-offset-2 disabled:opacity-50">
+        <button
+          type="submit"
+          disabled={pending}
+          className="font-medium text-primary underline underline-offset-2 disabled:opacity-50"
+        >
           {pending ? "Wysyłam…" : "Wyślij link ponownie"}
         </button>
       )}

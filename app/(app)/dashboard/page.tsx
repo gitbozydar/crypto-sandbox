@@ -1,5 +1,5 @@
 import { after } from "next/server";
-import { Suspense } from "react";
+import { Page } from "@/components/page";
 import { DashboardSkeleton } from "@/components/states";
 import { TradesTable } from "@/components/trades-table";
 import { ButtonLink, Card } from "@/components/ui";
@@ -11,15 +11,16 @@ import { HoldingsTable } from "./holdings-table";
 import { StatTiles } from "./stat-tiles";
 import { ValueChart } from "./value-chart";
 
-// Sesję czytamy w czasie żądania, więc treść musi być w <Suspense>.
+// Strona główna portfela.
 const DashboardPage = () => (
-  <Suspense fallback={<DashboardSkeleton />}>
+  <Page fallback={<DashboardSkeleton />}>
     <Dashboard />
-  </Suspense>
+  </Page>
 );
 
 export default DashboardPage;
 
+// Komponent pobierający dane portfela i wyświetlający kafelki, wykresy i tabele.
 const Dashboard = async () => {
   const user = await getCurrentUser();
   const portfolio = await getPortfolio(user.id);
@@ -28,7 +29,6 @@ const Dashboard = async () => {
     getRecentTrades(user.id),
   ]);
 
-  // Punkt na wykresie także bez transakcji (najwyżej raz na godzinę), już po wysłaniu strony.
   after(() => recordSnapshotIfStale(portfolio.walletId, portfolio.total));
 
   return (

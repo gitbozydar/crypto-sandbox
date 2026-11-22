@@ -1,14 +1,13 @@
 "use client";
 
-// Ustawienia konta: wylogowanie innych urządzeń, widoczność w rankingu, reset portfela, usunięcie konta.
-// Każdy formularz = jedno wywołanie useFormAction (błąd + blokada przycisku w jednym miejscu).
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { Button, ErrorMessage, Field } from "@/components/ui";
 import { useFormAction } from "@/components/use-form-action";
 import { authClient } from "@/lib/auth-client";
-import { resetPortfolio, setRankingVisibility } from "./actions";
+import { resetPortfolio, setRankingVisibility } from "@/lib/actions/account";
 
+// Przycisk wylogowania wszystkich innych urządzeń.
 export const RevokeOtherSessions = () => {
   const router = useRouter();
   const { onSubmit, error, pending } = useFormAction(async () => {
@@ -26,6 +25,7 @@ export const RevokeOtherSessions = () => {
   );
 };
 
+// Przycisk resetu portfela do kapitału startowego.
 export const ResetPortfolio = () => {
   const { onSubmit, pending } = useFormAction(async () => {
     if (!confirm("Na pewno? Salda, transakcje i historia wartości zostaną usunięte.")) return;
@@ -40,6 +40,7 @@ export const ResetPortfolio = () => {
   );
 };
 
+// Formularz usunięcia konta potwierdzanego hasłem.
 export const DeleteAccount = () => {
   const router = useRouter();
   const { onSubmit, error, pending } = useFormAction(async (form) => {
@@ -65,7 +66,7 @@ export const DeleteAccount = () => {
   );
 };
 
-// Przełącznik: czy pokazywać mnie w rankingu (imię, zdjęcie, ROI i wartość portfela).
+// Przełącznik widoczności w rankingu.
 export const RankingVisibility = ({ visible }: { visible: boolean }) => {
   const [checked, setChecked] = useState(visible);
   const [pending, startTransition] = useTransition();
@@ -84,7 +85,9 @@ export const RankingVisibility = ({ visible }: { visible: boolean }) => {
         disabled={pending}
         className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${checked ? "bg-primary" : "bg-border-strong"}`}
       >
-        <span className={`absolute top-0.5 left-0.5 size-5 rounded-full bg-foreground transition-transform ${checked ? "translate-x-5" : ""}`} />
+        <span
+          className={`absolute top-0.5 left-0.5 size-5 rounded-full bg-foreground transition-transform ${checked ? "translate-x-5" : ""}`}
+        />
       </button>
       Pokazuj mnie w rankingu
     </label>

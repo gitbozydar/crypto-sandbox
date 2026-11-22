@@ -1,14 +1,25 @@
 "use client";
 
-// Kawałki wspólne dla formularzy zleceń (rynkowe, warunkowe, automatyczne).
 import type { ReactNode } from "react";
 import { inputClass } from "@/components/ui";
 
 export type Side = "BUY" | "SELL";
-export const sideColor = (s: Side) => (s === "BUY" ? "bg-success text-success-foreground" : "bg-danger text-danger-foreground");
+// Funkcja zwracająca kolor dla kupna (zielony) lub sprzedaży (czerwony).
+export const sideColor = (s: Side) =>
+  s === "BUY" ? "bg-success text-success-foreground" : "bg-danger text-danger-foreground";
 
-// Pole liczby z jednostką po prawej (np. „USDT”). Przyjmuje tylko cyfry, kropkę i przecinek.
-export const NumberInput = ({ label, unit, value, onChange }: { label: string; unit: string; value: string; onChange: (v: string) => void }) => (
+// Komponent pola liczbowego z jednostką po prawej.
+export const NumberInput = ({
+  label,
+  unit,
+  value,
+  onChange,
+}: {
+  label: string;
+  unit: string;
+  value: string;
+  onChange: (v: string) => void;
+}) => (
   <label className="flex flex-col gap-1 text-xs text-muted">
     {label}
     <span className="relative">
@@ -25,8 +36,12 @@ export const NumberInput = ({ label, unit, value, onChange }: { label: string; u
   </label>
 );
 
-// Rząd małych przycisków wyboru (procent salda, odchylenie ceny, częstotliwość…).
-export const ChipRow = ({ items }: { items: { label: string; active?: boolean; onClick: () => void; disabled?: boolean }[] }) => (
+// Komponent rzędu małych przycisków wyboru.
+export const ChipRow = ({
+  items,
+}: {
+  items: { label: string; active?: boolean; onClick: () => void; disabled?: boolean }[];
+}) => (
   <div className="grid gap-1" style={{ gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` }}>
     {items.map((item) => (
       <button
@@ -44,7 +59,7 @@ export const ChipRow = ({ items }: { items: { label: string; active?: boolean; o
   </div>
 );
 
-// Szare pole z podsumowaniem zlecenia.
+// Komponent podsumowania zlecenia w formie listy.
 export const Summary = ({ rows }: { rows: [string, ReactNode][] }) => (
   <dl className="flex flex-col gap-1.5 rounded-lg bg-surface-muted p-3 text-sm">
     {rows.map(([label, value]) => (
@@ -56,6 +71,7 @@ export const Summary = ({ rows }: { rows: [string, ReactNode][] }) => (
   </dl>
 );
 
+// Komponent wyświetlający dostępne saldo.
 export const AvailableBalance = ({ amount, unit }: { amount: string; unit: string }) => (
   <div className="flex justify-between text-sm">
     <span className="text-muted">Dostępne</span>

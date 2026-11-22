@@ -11,6 +11,8 @@ npm run db:deploy      # migracje bazy
 npm run db:seed        # waluta startowa (USDT)
 npm run sync:markets   # pary z Binance + nazwy i logo z CoinGecko
 npm run dev            # http://localhost:3000
+npm run lint           # ESLint
+npm run format         # Prettier
 ```
 
 Wymagane zmienne w `.env`: `DATABASE_URL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`
@@ -24,17 +26,24 @@ Po zmianie `prisma/schema.prisma`: `npm run db:migrate`, potem restart `npm run 
 
 ```
 app/
-  (auth)/            logowanie, rejestracja, kod 2FA
-  (app)/dashboard/   portfel, historia transakcji, ustawienia 2FA
-  (app)/markets/     lista rynku (filtry, sortowanie) i strona pary (wykres + zlecenia)
-  api/               endpointy: Better Auth, świece do wykresu
-components/          wspólne komponenty UI
+  (auth)/              logowanie, rejestracja, kod 2FA, reset hasła
+  (app)/dashboard/     wartość portfela, zysk/strata, wykresy, pozycje
+  (app)/markets/       lista rynku (filtry, sortowanie) i strona pary (wykres, zlecenia, ATH)
+  (app)/orders/        zlecenia warunkowe i automatyczne kupowanie
+  (app)/ranking/       ranking użytkowników według ROI
+  (app)/profile/       zdjęcie, dane, hasło
+  (app)/settings/      2FA, sesje, prywatność, reset portfela, usunięcie konta
+  api/                 Better Auth, świece do wykresu
+components/            wspólne klocki UI (przyciski, tabele, strona, powiadomienia)
 lib/
-  auth.ts, session.ts   uwierzytelnianie (Better Auth + TOTP)
-  market/               Binance, CoinGecko, synchronizacja, WebSocket
-  trading/              silnik symulacji zleceń i odczyty portfela
-prisma/              schemat bazy, migracje, seed
-scripts/             synchronizacja rynków
+  actions/             akcje serwera (handel, konto)
+  auth.ts, session.ts  uwierzytelnianie (Better Auth + TOTP)
+  market/              Binance, CoinGecko, synchronizacja, WebSocket
+  trading/             silnik zleceń, portfel, zlecenia warunkowe i DCA
+  portfolio/           wycena, zysk/strata, historia wartości, ranking
+  jobs/                proces w tle wykonujący zlecenia i plany (co 15 s)
+prisma/                schemat bazy, migracje, seed
+scripts/               synchronizacja rynków
 ```
 
 ## Stos

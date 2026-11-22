@@ -1,6 +1,7 @@
 import { ButtonLink } from "@/components/ui";
 import { marketsUrl, type FilterState } from "./filters";
 
+// Komponent przycisków przechodzenia między stronami listy.
 export const Pagination = ({ state, pages, total }: { state: FilterState; pages: number; total: number }) => {
   const { page } = state;
   const link = (to: number, label: string) => (
